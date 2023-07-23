@@ -1,0 +1,8 @@
+[package]
+name = "artifact-store"
+version = "0.0.1"
+repository = "https://github.com/harryzcy/artifact-store"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
