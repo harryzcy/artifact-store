@@ -1,0 +1,40 @@
+name: Releases
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    name: Release on GitHub
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      - name: Publish Release
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: releases } = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            })
+            let releaseId = null;
+            for (const release of releases) {
+              if (release.draft) {
+                releaseId = release.id
+                break
+              }
+            }
+
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId,
+              tag_name: '${{ github.ref_name }}',
+              name: 'Release ${{ github.ref_name }}',
+              draft: context.eventName != 'push'
+            })
