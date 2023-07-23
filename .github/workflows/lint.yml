@@ -1,0 +1,19 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  super-linter:
+    name: Super Linter
+    uses: harryzcy/github-actions/.github/workflows/linter.yml@main
+
+  spelling:
+    name: Spelling
+    uses: harryzcy/github-actions/.github/workflows/spelling.yml@main
