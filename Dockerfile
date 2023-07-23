@@ -6,7 +6,7 @@ COPY ./ .
 
 RUN cargo build --release
 
-FROM gcr.io/distroless/cc-debian11
+FROM gcr.io/distroless/cc-debian11:latest
 
 WORKDIR /app
 
