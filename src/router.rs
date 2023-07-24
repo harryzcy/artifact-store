@@ -1,5 +1,5 @@
 use axum::{
-    extract::Path,
+    extract::{BodyStream, Path},
     response::Html,
     routing::{get, put},
     Json, Router,
@@ -25,8 +25,11 @@ struct Response {
     message: String,
 }
 
-async fn upload_handler(Path(params): Path<file::UploadParams>) -> Json<Response> {
-    match file::create_file(params) {
+async fn upload_handler(
+    Path(params): Path<file::UploadParams>,
+    stream: BodyStream,
+) -> Json<Response> {
+    match file::create_file(params, stream).await {
         Ok(_) => (),
         Err(e) => {
             let response = Response {
