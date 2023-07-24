@@ -25,7 +25,6 @@ struct Response {
     message: String,
 }
 
-
 async fn upload_handler(Path(params): Path<file::UploadParams>) -> Json<Response> {
     match file::create_file(params) {
         Ok(_) => (),
