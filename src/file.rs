@@ -14,6 +14,7 @@ pub struct UploadParams {
     path: String,
 }
 
+#[derive(Debug)]
 pub enum CreateFileError {
     IoError(std::io::Error),
     AxumError(axum::Error),
@@ -28,6 +29,26 @@ impl std::fmt::Display for CreateFileError {
     }
 }
 
+impl std::error::Error for CreateFileError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            CreateFileError::IoError(e) => Some(e),
+            CreateFileError::AxumError(e) => Some(e),
+        }
+    }
+}
+
+impl From<std::io::Error> for CreateFileError {
+    fn from(e: std::io::Error) -> Self {
+        Self::IoError(e)
+    }
+}
+impl From<axum::Error> for CreateFileError {
+    fn from(e: axum::Error) -> Self {
+        Self::AxumError(e)
+    }
+}
+
 pub async fn create_file(
     params: UploadParams,
     mut stream: BodyStream,
@@ -38,22 +59,12 @@ pub async fn create_file(
     );
     let path = format!("{}/{}", dir, params.path);
 
-    match fs::create_dir_all(dir) {
-        Ok(_) => (),
-        Err(e) => return Err(CreateFileError::IoError(e)),
-    }
-
-    let mut file = match fs::File::create(path) {
-        Ok(f) => f,
-        Err(e) => return Err(CreateFileError::IoError(e)),
-    };
+    fs::create_dir_all(dir)?;
+    let mut file = fs::File::create(path)?;
 
     while let Some(chunk) = stream.next().await {
         match chunk {
-            Ok(c) => match file.write_all(&c) {
-                Ok(_) => (),
-                Err(e) => return Err(CreateFileError::IoError(e)),
-            },
+            Ok(c) => file.write_all(&c)?,
             Err(e) => return Err(CreateFileError::AxumError(e)),
         }
     }
