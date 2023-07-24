@@ -10,7 +10,7 @@ pub struct UploadParams {
     owner: String,
     repo: String,
     commit: String,
-    filename: String,
+    path: String,
 }
 
 pub fn create_file(params: UploadParams) -> Result<(), Error> {
@@ -18,7 +18,7 @@ pub fn create_file(params: UploadParams) -> Result<(), Error> {
         "{}/{}/{}/{}/{}",
         DATA_DIR, params.server, params.owner, params.repo, params.commit
     );
-    let path = format!("{}/{}", dir, params.filename);
+    let path = format!("{}/{}", dir, params.path);
 
     match fs::create_dir_all(dir) {
         Ok(_) => (),
