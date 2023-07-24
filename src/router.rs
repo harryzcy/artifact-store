@@ -1,14 +1,18 @@
 use axum::{
+    extract::Path,
     response::Html,
     routing::{get, put},
     Json, Router,
 };
 use serde::Serialize;
 
+use crate::file;
+
 pub fn router() -> Router {
-    Router::new()
-        .route("/", get(index_handler))
-        .route("/upload", put(upload_handler))
+    Router::new().route("/", get(index_handler)).route(
+        "/upload/:server/:owner/:repo/:commit/*path",
+        put(upload_handler),
+    )
 }
 
 async fn index_handler() -> Html<&'static str> {
@@ -21,7 +25,19 @@ struct Response {
     message: String,
 }
 
-async fn upload_handler() -> Json<Response> {
+
+async fn upload_handler(Path(params): Path<file::UploadParams>) -> Json<Response> {
+    match file::create_file(params) {
+        Ok(_) => (),
+        Err(e) => {
+            let response = Response {
+                code: 500,
+                message: format!("{}", e),
+            };
+            return Json(response);
+        }
+    }
+
     let response = Response {
         code: 200,
         message: String::from("OK"),

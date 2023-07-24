@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 
 mod router;
+mod file;
 
 #[tokio::main]
 async fn main() {
