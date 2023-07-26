@@ -6,7 +6,7 @@ use axum::{
 };
 use serde::Serialize;
 
-use crate::file;
+use crate::storage;
 
 pub fn router() -> Router {
     Router::new().route("/", get(index_handler)).route(
@@ -26,10 +26,10 @@ struct Response {
 }
 
 async fn upload_handler(
-    Path(params): Path<file::UploadParams>,
+    Path(params): Path<storage::UploadParams>,
     stream: BodyStream,
 ) -> Json<Response> {
-    match file::create_file(params, stream).await {
+    match storage::create_file(params, stream).await {
         Ok(_) => (),
         Err(e) => {
             let response = Response {
