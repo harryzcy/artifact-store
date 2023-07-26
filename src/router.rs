@@ -6,9 +6,10 @@ use axum::{
 };
 use serde::Serialize;
 
+use crate::database;
 use crate::storage;
 
-pub fn router() -> Router {
+pub fn router(db: &mut database::Connection) -> Router {
     Router::new().route("/", get(index_handler)).route(
         "/upload/:server/:owner/:repo/:commit/*path",
         put(upload_handler),
@@ -29,7 +30,7 @@ async fn upload_handler(
     Path(params): Path<storage::UploadParams>,
     stream: BodyStream,
 ) -> Json<Response> {
-    match storage::create_file(params, stream).await {
+    match storage::handle_file_create(params, stream).await {
         Ok(_) => (),
         Err(e) => {
             let response = Response {
@@ -56,7 +57,8 @@ mod tests {
 
     #[tokio::test]
     async fn index_route() {
-        let app = router();
+        let db = database::create_memory_db().unwrap();
+        let app = router(&mut db);
 
         let response = app
             .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())

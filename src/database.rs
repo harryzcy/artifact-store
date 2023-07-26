@@ -1,4 +1,4 @@
-use rusqlite::Result;
+use rusqlite::{Params, Result};
 
 pub use rusqlite::Connection;
 
@@ -12,6 +12,10 @@ pub fn create_and_prepare_db(filename: &str) -> Result<Connection> {
 fn create_db(filename: &str) -> Result<Connection> {
     let conn = Connection::open(filename)?;
     Ok(conn)
+}
+
+pub fn create_memory_db() -> Result<Connection> {
+    create_db(":memory:")
 }
 
 /// Create the database tables if they don't exist.
@@ -67,6 +71,35 @@ pub fn shutdown_db(conn: Connection) -> Result<(), (rusqlite::Connection, rusqli
     conn.close()
 }
 
+pub struct Tx<'conn> {
+    tx: rusqlite::Transaction<'conn>,
+}
+
+impl<'conn> Tx<'conn> {
+    pub fn new(conn: &'conn mut Connection) -> Result<Self> {
+        let tx = conn.transaction()?;
+        Ok(Self { tx })
+    }
+
+    pub fn commit(self) -> Result<()> {
+        self.tx.commit()?;
+        Ok(())
+    }
+
+    pub fn rollback(self) -> Result<()> {
+        self.tx.rollback()?;
+        Ok(())
+    }
+
+    pub fn execute<P: Params>(&mut self, sql: &str, params: P) -> Result<usize> {
+        self.tx.execute(sql, params)
+    }
+
+    fn drop(&mut self) {
+        self.tx.rollback().unwrap();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -90,13 +123,13 @@ mod tests {
 
     #[test]
     fn create_db_test() {
-        let conn = create_db(":memory:").unwrap();
+        let conn = create_memory_db().unwrap();
         shutdown_db(conn).unwrap();
     }
 
     #[test]
     fn exists_table_test() {
-        let conn = create_db(":memory:").unwrap();
+        let conn: Connection = create_memory_db().unwrap();
         conn.execute("CREATE TABLE test (id INTEGER)", ()).unwrap();
         assert_eq!(exists_table(&conn, "test").unwrap(), true);
     }
