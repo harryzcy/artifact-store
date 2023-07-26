@@ -52,14 +52,22 @@ pub fn create_db() -> Result<Connection> {
 
 /// Create the database tables if they don't exist.
 fn prepare_db(conn: &Connection) -> Result<()> {
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS system (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        key TEXT NOT NULL,
-        value TEXT NOT NULL
-        )",
-        (),
-    )?;
+    if !exists_table(conn, "system")? {
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS system (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL
+            )",
+            (),
+        )?;
+
+        let db_version = "1";
+        conn.execute(
+            "INSERT INTO system (key, value) VALUES ('db_version', ?)",
+            [db_version],
+        )?;
+    }
 
     conn.execute(
         "CREATE TABLE IF NOT EXISTS artifacts (
@@ -75,6 +83,14 @@ fn prepare_db(conn: &Connection) -> Result<()> {
         (),
     )?;
     Ok(())
+}
+
+fn exists_table(conn: &Connection, table_name: &str) -> Result<bool> {
+    let mut stmt =
+        conn.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")?;
+    let mut rows = stmt.query([table_name])?;
+    let row = rows.next().unwrap();
+    Ok(row.is_some())
 }
 
 /// Shutdown the database connection.
