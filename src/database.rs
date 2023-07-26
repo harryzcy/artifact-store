@@ -1,12 +1,8 @@
 use rocksdb;
 
-pub fn init_db() -> Result<rocksdb::DB, rocksdb::Error> {
-    let path = "data/rocksdb";
+const DB_PATH: &str = "data/rocksdb";
 
-    let mut options = rocksdb::Options::default();
-    options.create_if_missing(true);
-
-    let db = rocksdb::DB::open(&options, path)?;
-
+pub fn init_db() -> Result<rocksdb::TransactionDB, rocksdb::Error> {
+    let db = rocksdb::TransactionDB::open_default(DB_PATH)?;
     Ok(db)
 }
