@@ -13,12 +13,12 @@ async fn main() {
     println!("listening on {}", addr);
     axum::Server::bind(&addr)
         .serve(router::router().into_make_service())
-        .with_graceful_shutdown(shutdown_signal())
+        .with_graceful_shutdown(shutdown_signal(db))
         .await
         .unwrap();
 }
 
-async fn shutdown_signal() {
+async fn shutdown_signal(db: storage::Connection) {
     let ctrl_c = async {
         signal::ctrl_c()
             .await
@@ -42,4 +42,6 @@ async fn shutdown_signal() {
     }
 
     println!("signal received, starting graceful shutdown");
+
+    storage::shutdown_db(db).unwrap();
 }

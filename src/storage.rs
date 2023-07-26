@@ -1,8 +1,10 @@
 use axum::extract::BodyStream;
 use futures_util::StreamExt;
-use rusqlite::{Connection, Result};
+use rusqlite::Result;
 use serde::Deserialize;
 use std::{fs, io::Write};
+
+pub use rusqlite::Connection;
 
 use crate::error::CreateFileError;
 
@@ -73,4 +75,9 @@ fn prepare_db(conn: &Connection) -> Result<()> {
         (),
     )?;
     Ok(())
+}
+
+/// Shutdown the database connection.
+pub fn shutdown_db(conn: Connection) -> Result<(), (rusqlite::Connection, rusqlite::Error)> {
+    conn.close()
 }
