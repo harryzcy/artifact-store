@@ -75,7 +75,7 @@ fn prepare_db(conn: &Connection) -> Result<()> {
             server TEXT NOT NULL,
             owner TEXT NOT NULL,
             repo TEXT NOT NULL,
-            commit TEXT NOT NULL,
+            commit_hash TEXT NOT NULL,
             path TEXT NOT NULL,
             size INTEGER NOT NULL,
             created_at TEXT NOT NULL
