@@ -1,13 +1,14 @@
 use std::net::SocketAddr;
 use tokio::signal;
 
+mod database;
 mod error;
 mod router;
 mod storage;
 
 #[tokio::main]
 async fn main() {
-    let db = storage::create_and_prepare_db("data/artifact.db").unwrap();
+    let db = database::create_and_prepare_db("data/artifact.db").unwrap();
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3001));
     println!("listening on {}", addr);
@@ -18,7 +19,7 @@ async fn main() {
         .unwrap();
 }
 
-async fn shutdown_signal(db: storage::Connection) {
+async fn shutdown_signal(db: database::Connection) {
     let ctrl_c = async {
         signal::ctrl_c()
             .await
@@ -43,5 +44,5 @@ async fn shutdown_signal(db: storage::Connection) {
 
     println!("signal received, starting graceful shutdown");
 
-    storage::shutdown_db(db).unwrap();
+    database::shutdown_db(db).unwrap();
 }
