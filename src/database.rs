@@ -1,3 +1,5 @@
+use rusqlite::Result;
+
 pub use rusqlite::Connection;
 
 /// Create a connection to the SQLite database, and prepare the database.
