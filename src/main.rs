@@ -7,7 +7,7 @@ mod storage;
 
 #[tokio::main]
 async fn main() {
-    let db = storage::create_db().unwrap();
+    let db = storage::create_and_prepare_db("data/artifact.db").unwrap();
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3001));
     println!("listening on {}", addr);
