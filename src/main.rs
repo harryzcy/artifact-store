@@ -1,12 +1,15 @@
 use std::net::SocketAddr;
 use tokio::signal;
 
+mod database;
 mod error;
 mod file;
 mod router;
 
 #[tokio::main]
 async fn main() {
+    database::init_db().unwrap();
+
     let addr = SocketAddr::from(([0, 0, 0, 0], 3001));
     println!("listening on {}", addr);
     axum::Server::bind(&addr)
