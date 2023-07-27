@@ -43,7 +43,6 @@ impl Database {
         }
     }
 
-    #[allow(dead_code)]
     pub fn transaction(&self) -> Transaction<'_> {
         match self {
             Database::RocksDB(db) => Transaction::RocksDB(db.transaction()),
@@ -54,4 +53,30 @@ impl Database {
 
 pub enum Transaction<'db> {
     RocksDB(rocksdb::Transaction<'db, rocksdb::TransactionDB>),
+}
+
+impl Transaction<'_> {
+    pub fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>, rocksdb::Error> {
+        match self {
+            Transaction::RocksDB(tx) => tx.get(key),
+        }
+    }
+
+    pub fn put(&self, key: &[u8], value: &[u8]) -> Result<(), rocksdb::Error> {
+        match self {
+            Transaction::RocksDB(tx) => tx.put(key, value),
+        }
+    }
+
+    pub fn delete(&self, key: &[u8]) -> Result<(), rocksdb::Error> {
+        match self {
+            Transaction::RocksDB(tx) => tx.delete(key),
+        }
+    }
+
+    pub fn commit(self) -> Result<(), rocksdb::Error> {
+        match self {
+            Transaction::RocksDB(tx) => tx.commit(),
+        }
+    }
 }

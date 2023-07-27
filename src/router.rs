@@ -1,12 +1,13 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use axum::{
-    extract::{BodyStream, Path},
+    extract::{BodyStream, Path, State},
     response::Html,
     routing::{get, put},
     Json, Router,
 };
 use serde::Serialize;
+use tokio::sync::RwLock;
 
 use crate::database;
 use crate::storage;
@@ -41,9 +42,11 @@ struct Response {
 
 async fn upload_handler(
     Path(params): Path<storage::UploadParams>,
+    State(state): State<SharedState>,
     stream: BodyStream,
 ) -> Json<Response> {
-    match storage::handle_file_upload(params, stream).await {
+    let db = &state.read().await.db;
+    match storage::handle_file_upload(db, params, stream).await {
         Ok(_) => (),
         Err(e) => {
             let response = Response {

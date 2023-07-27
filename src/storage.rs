@@ -4,6 +4,7 @@ use axum::extract::BodyStream;
 use futures_util::StreamExt;
 use serde::Deserialize;
 
+use crate::database;
 use crate::error::CreateFileError;
 
 const DATA_DIR: &str = "data";
@@ -18,6 +19,7 @@ pub struct UploadParams {
 }
 
 pub async fn handle_file_upload(
+    db: &database::Database,
     params: UploadParams,
     mut stream: BodyStream,
 ) -> Result<(), CreateFileError> {
@@ -26,6 +28,8 @@ pub async fn handle_file_upload(
         DATA_DIR, params.server, params.owner, params.repo, params.commit
     );
     let path = format!("{}/{}", dir, params.path);
+
+    let txn = db.transaction();
 
     fs::create_dir_all(dir)?;
     let mut file = fs::File::create(path)?;
