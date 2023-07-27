@@ -35,6 +35,7 @@ pub async fn handle_file_upload(
     let path = format!("{}/{}", dir, params.path);
 
     let txn = db.transaction();
+
     txn.create_commit(database::CreateCommitParams {
         commit: &params.commit,
         server: &params.server,
@@ -43,7 +44,6 @@ pub async fn handle_file_upload(
     })
     .or_else(|e| {
         if e.kind() != Some(database::ErrorKind::CommitExists) {
-            txn.rollback()?;
             return Err(HandleRequestError::from(e));
         }
         Ok(())
@@ -53,16 +53,9 @@ pub async fn handle_file_upload(
         time: &time,
         commit: &params.commit,
         path: &params.path,
-    })
-    .or_else(|e| {
-        txn.rollback()?;
-        Err(HandleRequestError::from(e))
     })?;
 
-    fs::create_dir_all(dir).or_else(|e| {
-        txn.rollback()?;
-        Err(HandleRequestError::from(e))
-    })?;
+    fs::create_dir_all(dir)?;
     let mut file = fs::File::create(path)?;
 
     while let Some(chunk) = stream.next().await {

@@ -86,12 +86,6 @@ impl Transaction<'_> {
             Transaction::RocksDB(tx) => tx.commit(),
         }
     }
-
-    pub fn rollback(&self) -> Result<(), rocksdb::Error> {
-        match self {
-            Transaction::RocksDB(tx) => tx.rollback(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
