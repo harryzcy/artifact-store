@@ -1,5 +1,3 @@
-use rocksdb;
-
 const ROCKSDB_PATH: &str = "data/rocksdb";
 
 #[allow(dead_code)]
