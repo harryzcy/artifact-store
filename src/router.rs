@@ -73,7 +73,7 @@ mod tests {
 
     #[tokio::test]
     async fn index_route() {
-        let db = database::Database::new_mockdb();
+        let db = database::Database::new_rocksdb("data/test_router").unwrap();
         let app = router(db);
 
         let response = app
@@ -85,5 +85,7 @@ mod tests {
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         assert_eq!(&body[..], b"<h1>Artifact Store</h1>");
+
+        std::fs::remove_dir_all("data/test_router").unwrap();
     }
 }

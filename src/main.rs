@@ -6,9 +6,11 @@ mod error;
 mod router;
 mod storage;
 
+const ROCKSDB_PATH: &str = "data/rocksdb";
+
 #[tokio::main]
 async fn main() {
-    let db = database::Database::new_rocksdb().unwrap();
+    let db = database::Database::new_rocksdb(ROCKSDB_PATH).unwrap();
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3001));
     println!("listening on {}", addr);

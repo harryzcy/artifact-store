@@ -1,28 +1,19 @@
-const ROCKSDB_PATH: &str = "data/rocksdb";
-
 type TransactionDB = rocksdb::OptimisticTransactionDB;
 
 #[allow(dead_code)]
 pub enum Database {
     RocksDB(TransactionDB),
-    MockDB,
 }
 
 impl Database {
-    pub fn new_rocksdb() -> Result<Self, rocksdb::Error> {
-        let db = TransactionDB::open_default(ROCKSDB_PATH)?;
+    pub fn new_rocksdb(path: &str) -> Result<Self, rocksdb::Error> {
+        let db = TransactionDB::open_default(path)?;
         Ok(Database::RocksDB(db))
-    }
-
-    #[allow(dead_code)]
-    pub fn new_mockdb() -> Self {
-        Database::MockDB
     }
 
     pub fn transaction(&self) -> Transaction<'_> {
         match self {
             Database::RocksDB(db) => Transaction::RocksDB(db.transaction()),
-            Database::MockDB => panic!("not implemented"),
         }
     }
 }
@@ -150,15 +141,13 @@ pub struct CreateArtifactParams<'a> {
 mod tests {
     use super::*;
 
-    fn remove_db() {
-        let _ = std::fs::remove_dir_all(ROCKSDB_PATH);
+    fn remove_db(path: &str) {
+        let _ = std::fs::remove_dir_all(path);
     }
 
     #[test]
     fn test_create_commit() {
-        remove_db();
-
-        let db = Database::new_rocksdb().unwrap();
+        let db = Database::new_rocksdb("data/test_create_commit").unwrap();
         let tx = db.transaction();
         let params = CreateCommitParams {
             commit: &"1234567890abcdef".to_string(),
@@ -168,13 +157,13 @@ mod tests {
         };
         tx.create_commit(params).unwrap();
         tx.commit().unwrap();
+
+        remove_db("data/test_create_commit");
     }
 
     #[test]
     fn test_create_commit_twice() {
-        remove_db();
-
-        let db = Database::new_rocksdb().unwrap();
+        let db = Database::new_rocksdb("data/test_create_commit_twice").unwrap();
         let tx = db.transaction();
         let params = CreateCommitParams {
             commit: &"1234567890abcdef".to_string(),
@@ -185,13 +174,13 @@ mod tests {
         tx.create_commit(params.clone()).unwrap();
         let err = tx.create_commit(params.clone()).unwrap_err();
         assert_eq!(err.kind(), Some(ErrorKind::CommitExists));
+
+        remove_db("data/test_create_commit_twice");
     }
 
     #[test]
     fn test_create_artifact() {
-        remove_db();
-
-        let db = Database::new_rocksdb().unwrap();
+        let db = Database::new_rocksdb("data/test_create_artifact").unwrap();
         let tx = db.transaction();
         let params = CreateArtifactParams {
             time: &1234567890,
@@ -200,13 +189,13 @@ mod tests {
         };
         tx.create_artifact(params).unwrap();
         tx.commit().unwrap();
+
+        remove_db("data/test_create_artifact");
     }
 
     #[test]
     fn test_create_artifact_twice() {
-        remove_db();
-
-        let db = Database::new_rocksdb().unwrap();
+        let db = Database::new_rocksdb("data/test_create_artifact_twice").unwrap();
         let tx = db.transaction();
         let params = CreateArtifactParams {
             time: &1234567890,
@@ -216,5 +205,7 @@ mod tests {
         tx.create_artifact(params.clone()).unwrap();
         let err = tx.create_artifact(params.clone()).unwrap_err();
         assert_eq!(err.kind(), Some(ErrorKind::ArtifactExists));
+
+        remove_db("data/test_create_artifact_twice");
     }
 }
