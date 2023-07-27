@@ -2,6 +2,7 @@ use rocksdb;
 
 const ROCKSDB_PATH: &str = "data/rocksdb";
 
+#[allow(dead_code)]
 pub enum Database {
     RocksDB(rocksdb::TransactionDB),
     MockDB,
@@ -13,6 +14,7 @@ impl Database {
         Ok(Database::RocksDB(db))
     }
 
+    #[allow(dead_code)]
     pub fn new_mockdb() -> Self {
         Database::MockDB
     }
