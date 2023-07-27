@@ -1,14 +1,16 @@
 const ROCKSDB_PATH: &str = "data/rocksdb";
 
+type TransactionDB = rocksdb::OptimisticTransactionDB;
+
 #[allow(dead_code)]
 pub enum Database {
-    RocksDB(rocksdb::TransactionDB),
+    RocksDB(TransactionDB),
     MockDB,
 }
 
 impl Database {
     pub fn new_rocksdb() -> Result<Self, rocksdb::Error> {
-        let db = rocksdb::TransactionDB::open_default(ROCKSDB_PATH)?;
+        let db = TransactionDB::open_default(ROCKSDB_PATH)?;
         Ok(Database::RocksDB(db))
     }
 
@@ -26,7 +28,7 @@ impl Database {
 }
 
 pub enum Transaction<'db> {
-    RocksDB(rocksdb::Transaction<'db, rocksdb::TransactionDB>),
+    RocksDB(rocksdb::Transaction<'db, TransactionDB>),
 }
 
 impl Transaction<'_> {
