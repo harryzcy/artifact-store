@@ -1,3 +1,5 @@
+use std::sync::{Arc, RwLock};
+
 use axum::{
     extract::{BodyStream, Path},
     response::Html,
@@ -6,13 +8,25 @@ use axum::{
 };
 use serde::Serialize;
 
-use crate::file;
+use crate::database;
+use crate::storage;
 
-pub fn router() -> Router {
-    Router::new().route("/", get(index_handler)).route(
-        "/upload/:server/:owner/:repo/:commit/*path",
-        put(upload_handler),
-    )
+type SharedState = Arc<RwLock<RouterState>>;
+
+pub struct RouterState {
+    pub db: database::Database,
+}
+
+pub fn router(db: database::Database) -> Router {
+    let shared_state = SharedState::new(RwLock::new(RouterState { db }));
+
+    Router::new()
+        .route("/", get(index_handler))
+        .route(
+            "/upload/:server/:owner/:repo/:commit/*path",
+            put(upload_handler),
+        )
+        .with_state(Arc::clone(&shared_state))
 }
 
 async fn index_handler() -> Html<&'static str> {
@@ -26,10 +40,10 @@ struct Response {
 }
 
 async fn upload_handler(
-    Path(params): Path<file::UploadParams>,
+    Path(params): Path<storage::UploadParams>,
     stream: BodyStream,
 ) -> Json<Response> {
-    match file::create_file(params, stream).await {
+    match storage::handle_file_upload(params, stream).await {
         Ok(_) => (),
         Err(e) => {
             let response = Response {
@@ -56,7 +70,8 @@ mod tests {
 
     #[tokio::test]
     async fn index_route() {
-        let app = router();
+        let db = database::Database::new_rocksdb().unwrap();
+        let app = router(db);
 
         let response = app
             .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())

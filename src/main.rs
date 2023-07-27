@@ -3,17 +3,17 @@ use tokio::signal;
 
 mod database;
 mod error;
-mod file;
 mod router;
+mod storage;
 
 #[tokio::main]
 async fn main() {
-    database::init_db().unwrap();
+    let db = database::Database::new_rocksdb().unwrap();
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3001));
     println!("listening on {}", addr);
     axum::Server::bind(&addr)
-        .serve(router::router().into_make_service())
+        .serve(router::router(db).into_make_service())
         .with_graceful_shutdown(shutdown_signal())
         .await
         .unwrap();

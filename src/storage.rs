@@ -1,7 +1,8 @@
+use std::{fs, io::Write};
+
 use axum::extract::BodyStream;
 use futures_util::StreamExt;
 use serde::Deserialize;
-use std::{fs, io::Write};
 
 use crate::error::CreateFileError;
 
@@ -16,7 +17,7 @@ pub struct UploadParams {
     path: String,
 }
 
-pub async fn create_file(
+pub async fn handle_file_upload(
     params: UploadParams,
     mut stream: BodyStream,
 ) -> Result<(), CreateFileError> {
