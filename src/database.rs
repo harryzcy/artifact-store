@@ -131,14 +131,14 @@ impl From<String> for Error {
 }
 
 pub struct CreateCommitParams<'a> {
-    pub commit: &'a str,
-    pub server: &'a str,
-    pub owner: &'a str,
-    pub repo: &'a str,
+    pub commit: &'a String,
+    pub server: &'a String,
+    pub owner: &'a String,
+    pub repo: &'a String,
 }
 
 pub struct CreateArtifactParams<'a> {
     pub time: &'a u128,
-    pub commit: &'a str,
-    pub path: &'a str,
+    pub commit: &'a String,
+    pub path: &'a String,
 }
