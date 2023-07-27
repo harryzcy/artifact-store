@@ -33,7 +33,8 @@ pub enum Transaction<'db> {
 
 impl Transaction<'_> {
     /// Store the commit data in the database.
-    pub fn create_commit(&self, params: CreateCommitParams) -> Result<(), rocksdb::Error> {
+    /// If the commit already exists, return an error.
+    pub fn create_commit(&self, params: CreateCommitParams) -> Result<(), Error> {
         let commit_key = format!("commit:{}", params.commit);
         let commit_value = format!("{}/{}/{}", params.server, params.owner, params.repo);
 
@@ -45,10 +46,38 @@ impl Transaction<'_> {
                 let commit_key_bytes = commit_key.as_bytes();
                 let exists = tx.get(commit_key_bytes)?.is_some();
                 if exists {
-                    return Ok(());
+                    return Err(Error::Generic(format!(
+                        "commit already exists: {}",
+                        params.commit
+                    )));
                 }
                 tx.put(commit_key_bytes, commit_value.as_bytes())?;
                 tx.put(repo_key.as_bytes(), repo_value.as_bytes())?;
+                Ok(())
+            }
+        }
+    }
+
+    /// Store the artifact data in the database.
+    /// If the artifact already exists, return an error.
+    pub fn create_artifact(&self, params: CreateArtifactParams) -> Result<(), Error> {
+        let artifact_key = [
+            format!("artifact:{}", params.commit).as_bytes(),
+            &params.time.to_be_bytes(),
+        ]
+        .concat();
+
+        match self {
+            Transaction::RocksDB(tx) => {
+                let exists = tx.get(&artifact_key)?.is_some();
+                if exists {
+                    return Err(Error::Generic(format!(
+                        "artifact already exists: {}",
+                        params.path
+                    )));
+                }
+
+                tx.put(&artifact_key, params.commit.as_bytes())?;
                 Ok(())
             }
         }
@@ -59,11 +88,63 @@ impl Transaction<'_> {
             Transaction::RocksDB(tx) => tx.commit(),
         }
     }
+
+    pub fn rollback(&self) -> Result<(), rocksdb::Error> {
+        match self {
+            Transaction::RocksDB(tx) => tx.rollback(),
+        }
+    }
 }
 
-pub struct CreateCommitParams {
-    pub commit: String,
-    pub server: String,
-    pub owner: String,
-    pub repo: String,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ErrorKind {
+    CommitExists,
+    ArtifactExists,
+}
+
+pub enum Error {
+    RocksDB(rocksdb::Error),
+    Generic(String),
+}
+
+impl Error {
+    pub fn kind(&self) -> Option<ErrorKind> {
+        match self {
+            Error::Generic(e) => {
+                if e.contains("commit already exists") {
+                    Some(ErrorKind::CommitExists)
+                } else if e.contains("artifact already exists") {
+                    Some(ErrorKind::ArtifactExists)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+}
+
+impl From<rocksdb::Error> for Error {
+    fn from(e: rocksdb::Error) -> Self {
+        Error::RocksDB(e)
+    }
+}
+
+impl From<String> for Error {
+    fn from(e: String) -> Self {
+        Error::Generic(e)
+    }
+}
+
+pub struct CreateCommitParams<'a> {
+    pub commit: &'a str,
+    pub server: &'a str,
+    pub owner: &'a str,
+    pub repo: &'a str,
+}
+
+pub struct CreateArtifactParams<'a> {
+    pub time: &'a u128,
+    pub commit: &'a str,
+    pub path: &'a str,
 }

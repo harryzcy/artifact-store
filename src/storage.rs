@@ -1,4 +1,8 @@
-use std::{fs, io::Write};
+use std::{
+    fs,
+    io::Write,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use axum::extract::BodyStream;
 use futures_util::StreamExt;
@@ -23,6 +27,7 @@ pub async fn handle_file_upload(
     params: UploadParams,
     mut stream: BodyStream,
 ) -> Result<(), HandleRequestError> {
+    let time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
     let dir = format!(
         "{}/{}/{}/{}/{}",
         DATA_DIR, params.server, params.owner, params.repo, params.commit
@@ -31,13 +36,33 @@ pub async fn handle_file_upload(
 
     let txn = db.transaction();
     txn.create_commit(database::CreateCommitParams {
-        commit: params.commit,
-        server: params.server,
-        owner: params.owner,
-        repo: params.repo,
+        commit: &params.commit,
+        server: &params.server,
+        owner: &params.owner,
+        repo: &params.repo,
+    })
+    .or_else(|e| {
+        if e.kind() != Some(database::ErrorKind::CommitExists) {
+            txn.rollback()?;
+            return Err(HandleRequestError::from(e));
+        }
+        Ok(())
     })?;
 
-    fs::create_dir_all(dir)?;
+    txn.create_artifact(database::CreateArtifactParams {
+        time: &time,
+        commit: &params.commit,
+        path: &params.path,
+    })
+    .or_else(|e| {
+        txn.rollback()?;
+        Err(HandleRequestError::from(e))
+    })?;
+
+    fs::create_dir_all(dir).or_else(|e| {
+        txn.rollback()?;
+        Err(HandleRequestError::from(e))
+    })?;
     let mut file = fs::File::create(path)?;
 
     while let Some(chunk) = stream.next().await {
