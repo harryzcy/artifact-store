@@ -70,7 +70,7 @@ mod tests {
 
     #[tokio::test]
     async fn index_route() {
-        let db = database::Database::new_rocksdb().unwrap();
+        let db = database::Database::new_mockdb();
         let app = router(db);
 
         let response = app
