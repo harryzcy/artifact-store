@@ -19,30 +19,6 @@ impl Database {
         Database::MockDB
     }
 
-    #[allow(dead_code)]
-    pub fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>, rocksdb::Error> {
-        match self {
-            Database::RocksDB(db) => db.get(key),
-            Database::MockDB => Ok(None),
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn put(&self, key: &[u8], value: &[u8]) -> Result<(), rocksdb::Error> {
-        match self {
-            Database::RocksDB(db) => db.put(key, value),
-            Database::MockDB => Ok(()),
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn delete(&self, key: &[u8]) -> Result<(), rocksdb::Error> {
-        match self {
-            Database::RocksDB(db) => db.delete(key),
-            Database::MockDB => Ok(()),
-        }
-    }
-
     pub fn transaction(&self) -> Transaction<'_> {
         match self {
             Database::RocksDB(db) => Transaction::RocksDB(db.transaction()),
@@ -56,21 +32,25 @@ pub enum Transaction<'db> {
 }
 
 impl Transaction<'_> {
-    pub fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>, rocksdb::Error> {
-        match self {
-            Transaction::RocksDB(tx) => tx.get(key),
-        }
-    }
+    /// Store the commit data in the database.
+    pub fn create_commit(&self, params: CreateCommitParams) -> Result<(), rocksdb::Error> {
+        let commit_key = format!("commit:{}", params.commit);
+        let commit_value = format!("{}/{}/{}", params.server, params.owner, params.repo);
 
-    pub fn put(&self, key: &[u8], value: &[u8]) -> Result<(), rocksdb::Error> {
-        match self {
-            Transaction::RocksDB(tx) => tx.put(key, value),
-        }
-    }
+        let repo_key = format!("repo:{}/{}", commit_value, params.commit);
+        let repo_value = params.commit;
 
-    pub fn delete(&self, key: &[u8]) -> Result<(), rocksdb::Error> {
         match self {
-            Transaction::RocksDB(tx) => tx.delete(key),
+            Transaction::RocksDB(tx) => {
+                let commit_key_bytes = commit_key.as_bytes();
+                let exists = tx.get(commit_key_bytes)?.is_some();
+                if exists {
+                    return Ok(());
+                }
+                tx.put(commit_key_bytes, commit_value.as_bytes())?;
+                tx.put(repo_key.as_bytes(), repo_value.as_bytes())?;
+                Ok(())
+            }
         }
     }
 
@@ -79,4 +59,11 @@ impl Transaction<'_> {
             Transaction::RocksDB(tx) => tx.commit(),
         }
     }
+}
+
+pub struct CreateCommitParams {
+    pub commit: String,
+    pub server: String,
+    pub owner: String,
+    pub repo: String,
 }
