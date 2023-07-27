@@ -1,18 +1,33 @@
+use std::sync::Arc;
+
 use axum::{
-    extract::{BodyStream, Path},
+    extract::{BodyStream, Path, State},
     response::Html,
     routing::{get, put},
     Json, Router,
 };
 use serde::Serialize;
+use tokio::sync::RwLock;
 
-use crate::file;
+use crate::database;
+use crate::storage;
 
-pub fn router() -> Router {
-    Router::new().route("/", get(index_handler)).route(
-        "/upload/:server/:owner/:repo/:commit/*path",
-        put(upload_handler),
-    )
+type SharedState = Arc<RwLock<RouterState>>;
+
+pub struct RouterState {
+    pub db: database::Database,
+}
+
+pub fn router(db: database::Database) -> Router {
+    let shared_state = SharedState::new(RwLock::new(RouterState { db }));
+
+    Router::new()
+        .route("/", get(index_handler))
+        .route(
+            "/upload/:server/:owner/:repo/:commit/*path",
+            put(upload_handler),
+        )
+        .with_state(Arc::clone(&shared_state))
 }
 
 async fn index_handler() -> Html<&'static str> {
@@ -26,10 +41,12 @@ struct Response {
 }
 
 async fn upload_handler(
-    Path(params): Path<file::UploadParams>,
+    Path(params): Path<storage::UploadParams>,
+    State(state): State<SharedState>,
     stream: BodyStream,
 ) -> Json<Response> {
-    match file::create_file(params, stream).await {
+    let db = &state.read().await.db;
+    match storage::handle_file_upload(db, params, stream).await {
         Ok(_) => (),
         Err(e) => {
             let response = Response {
@@ -56,7 +73,8 @@ mod tests {
 
     #[tokio::test]
     async fn index_route() {
-        let app = router();
+        let db = database::Database::new_rocksdb("data/test_router").unwrap();
+        let app = router(db);
 
         let response = app
             .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
@@ -67,5 +85,7 @@ mod tests {
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         assert_eq!(&body[..], b"<h1>Artifact Store</h1>");
+
+        std::fs::remove_dir_all("data/test_router").unwrap();
     }
 }
