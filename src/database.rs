@@ -96,6 +96,7 @@ pub enum ErrorKind {
     ArtifactExists,
 }
 
+#[derive(Debug)]
 pub enum Error {
     RocksDB(rocksdb::Error),
     Generic(String),
@@ -130,6 +131,7 @@ impl From<String> for Error {
     }
 }
 
+#[derive(Clone)]
 pub struct CreateCommitParams<'a> {
     pub commit: &'a String,
     pub server: &'a String,
@@ -137,8 +139,82 @@ pub struct CreateCommitParams<'a> {
     pub repo: &'a String,
 }
 
+#[derive(Clone)]
 pub struct CreateArtifactParams<'a> {
     pub time: &'a u128,
     pub commit: &'a String,
     pub path: &'a String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn remove_db() {
+        let _ = std::fs::remove_dir_all(ROCKSDB_PATH);
+    }
+
+    #[test]
+    fn test_create_commit() {
+        remove_db();
+
+        let db = Database::new_rocksdb().unwrap();
+        let tx = db.transaction();
+        let params = CreateCommitParams {
+            commit: &"1234567890abcdef".to_string(),
+            server: &"github.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo".to_string(),
+        };
+        tx.create_commit(params).unwrap();
+        tx.commit().unwrap();
+    }
+
+    #[test]
+    fn test_create_commit_twice() {
+        remove_db();
+
+        let db = Database::new_rocksdb().unwrap();
+        let tx = db.transaction();
+        let params = CreateCommitParams {
+            commit: &"1234567890abcdef".to_string(),
+            server: &"github.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo".to_string(),
+        };
+        tx.create_commit(params.clone()).unwrap();
+        let err = tx.create_commit(params.clone()).unwrap_err();
+        assert_eq!(err.kind(), Some(ErrorKind::CommitExists));
+    }
+
+    #[test]
+    fn test_create_artifact() {
+        remove_db();
+
+        let db = Database::new_rocksdb().unwrap();
+        let tx = db.transaction();
+        let params = CreateArtifactParams {
+            time: &1234567890,
+            commit: &"1234567890abcdef".to_string(),
+            path: &"path/to/artifact".to_string(),
+        };
+        tx.create_artifact(params).unwrap();
+        tx.commit().unwrap();
+    }
+
+    #[test]
+    fn test_create_artifact_twice() {
+        remove_db();
+
+        let db = Database::new_rocksdb().unwrap();
+        let tx = db.transaction();
+        let params = CreateArtifactParams {
+            time: &1234567890,
+            commit: &"1234567890abcdef".to_string(),
+            path: &"path/to/artifact".to_string(),
+        };
+        tx.create_artifact(params.clone()).unwrap();
+        let err = tx.create_artifact(params.clone()).unwrap_err();
+        assert_eq!(err.kind(), Some(ErrorKind::ArtifactExists));
+    }
 }
