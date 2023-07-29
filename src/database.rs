@@ -85,10 +85,7 @@ impl Transaction<'_> {
     /// Store the artifact data in the database.
     /// If the artifact already exists, return an error.
     pub fn create_artifact(&self, time: u128, params: CreateArtifactParams) -> Result<(), Error> {
-        let key = format!(
-            "artifact#{}#{}#{}",
-            params.commit, params.commit, params.path
-        );
+        let key = format!("artifact#{}#{}", params.commit, params.path);
 
         match self {
             Transaction::RocksDB(tx) => {
@@ -100,7 +97,7 @@ impl Transaction<'_> {
                     )));
                 }
 
-                tx.put(&key, time.to_be_bytes())?;
+                tx.put(key, time.to_be_bytes())?;
                 Ok(())
             }
         }
