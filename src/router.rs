@@ -83,7 +83,7 @@ async fn download_handler(
 
     let headers = [(
         header::CONTENT_DISPOSITION,
-        format!("attachment; filename=\"{:?}\"", filename),
+        format!("attachment; filename=\"{}\"", filename),
     )];
 
     Ok((headers, body))
