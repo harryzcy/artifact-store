@@ -16,6 +16,12 @@ impl Database {
             Database::RocksDB(db) => Transaction::RocksDB(db.transaction()),
         }
     }
+
+    pub fn exists_artifact(&self, params: GetArtifactParams) -> Result<bool, Error> {
+        let key = format!("artifact:{}/{}/{}", params.commit, params.path, params.time);
+
+        Ok(false)
+    }
 }
 
 pub enum Transaction<'db> {
@@ -133,6 +139,12 @@ pub struct CreateCommitParams<'a> {
 #[derive(Clone)]
 pub struct CreateArtifactParams<'a> {
     pub time: &'a u128,
+    pub commit: &'a String,
+    pub path: &'a String,
+}
+
+#[derive(Clone)]
+pub struct GetArtifactParams<'a> {
     pub commit: &'a String,
     pub path: &'a String,
 }

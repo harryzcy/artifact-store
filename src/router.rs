@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     extract::{BodyStream, Path, State},
-    response::Html,
+    response::{Html, IntoResponse},
     routing::{get, put},
     Json, Router,
 };
@@ -27,6 +27,7 @@ pub fn router(db: database::Database) -> Router {
             "/upload/:server/:owner/:repo/:commit/*path",
             put(upload_handler),
         )
+        .route("/:server/:owner/:repo/:commit/*path", get(download_handler))
         .with_state(Arc::clone(&shared_state))
 }
 
@@ -47,6 +48,29 @@ async fn upload_handler(
 ) -> Json<Response> {
     let db = &state.read().await.db;
     match storage::handle_file_upload(db, params, stream).await {
+        Ok(_) => (),
+        Err(e) => {
+            let response = Response {
+                code: 500,
+                message: format!("{}", e),
+            };
+            return Json(response);
+        }
+    }
+
+    let response = Response {
+        code: 200,
+        message: String::from("OK"),
+    };
+    Json(response)
+}
+
+async fn download_handler(
+    Path(params): Path<storage::DownloadParams>,
+    State(state): State<SharedState>,
+) -> impl IntoResponse {
+    let db = &state.read().await.db;
+    match storage::prepare_download_file(db, params).await {
         Ok(_) => (),
         Err(e) => {
             let response = Response {

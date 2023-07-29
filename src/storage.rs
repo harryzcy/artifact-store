@@ -68,3 +68,21 @@ pub async fn handle_file_upload(
     txn.commit()?;
     Ok(())
 }
+
+#[derive(Deserialize)]
+pub struct DownloadParams {
+    server: String,
+    owner: String,
+    repo: String,
+    commit: String,
+    path: String,
+}
+
+pub async fn prepare_download_file(
+    db: &database::Database,
+    params: DownloadParams,
+) -> Result<String, HandleRequestError> {
+    let txn = db.transaction();
+
+    Ok("".to_string())
+}
