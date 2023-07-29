@@ -2,15 +2,16 @@ use std::sync::Arc;
 
 use axum::{
     extract::{BodyStream, Path, State},
-    response::Html,
+    response::{Html, IntoResponse},
     routing::{get, put},
     Json, Router,
 };
+use hyper::{header, StatusCode};
 use serde::Serialize;
 use tokio::sync::RwLock;
 
-use crate::database;
 use crate::storage;
+use crate::{database, error::HandleRequestError};
 
 type SharedState = Arc<RwLock<RouterState>>;
 
@@ -27,6 +28,7 @@ pub fn router(db: database::Database) -> Router {
             "/upload/:server/:owner/:repo/:commit/*path",
             put(upload_handler),
         )
+        .route("/:server/:owner/:repo/:commit/*path", get(download_handler))
         .with_state(Arc::clone(&shared_state))
 }
 
@@ -62,6 +64,32 @@ async fn upload_handler(
         message: String::from("OK"),
     };
     Json(response)
+}
+
+async fn download_handler(
+    Path(params): Path<storage::DownloadParams>,
+    State(state): State<SharedState>,
+) -> impl IntoResponse {
+    let db = &state.read().await.db;
+    let (filename, body) = match storage::prepare_download_file(db, params).await {
+        Ok(result) => result,
+        Err(e) => match e {
+            HandleRequestError::NotFound(filename) => {
+                return Err((
+                    StatusCode::NOT_FOUND,
+                    format!("File not found: {}", filename),
+                ))
+            }
+            _ => return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e))),
+        },
+    };
+
+    let headers = [(
+        header::CONTENT_DISPOSITION,
+        format!("attachment; filename=\"{:?}\"", filename),
+    )];
+
+    Ok((headers, body))
 }
 
 #[cfg(test)]

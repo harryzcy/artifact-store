@@ -16,6 +16,25 @@ impl Database {
             Database::RocksDB(db) => Transaction::RocksDB(db.transaction()),
         }
     }
+
+    pub fn exists_artifact(&self, params: ExistsArtifactParams) -> Result<bool, Error> {
+        let commit_key = format!(
+            "commit#{}#{}#{}#{}",
+            params.server, params.owner, params.repo, params.commit
+        );
+        let exists = match self {
+            Database::RocksDB(db) => db.get(commit_key.as_bytes())?.is_some(),
+        };
+        if !exists {
+            return Ok(false);
+        }
+
+        let artifact_key = format!("artifact#{}#{}", params.commit, params.path);
+        let exists = match self {
+            Database::RocksDB(db) => db.get(artifact_key.as_bytes())?.is_some(),
+        };
+        Ok(exists)
+    }
 }
 
 pub enum Transaction<'db> {
@@ -145,6 +164,15 @@ pub struct CreateCommitParams<'a> {
 
 #[derive(Clone)]
 pub struct CreateArtifactParams<'a> {
+    pub commit: &'a String,
+    pub path: &'a String,
+}
+
+#[derive(Clone)]
+pub struct ExistsArtifactParams<'a> {
+    pub server: &'a String,
+    pub owner: &'a String,
+    pub repo: &'a String,
     pub commit: &'a String,
     pub path: &'a String,
 }
