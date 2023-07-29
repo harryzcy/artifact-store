@@ -22,7 +22,7 @@ pub struct UploadParams {
     path: String,
 }
 
-pub async fn handle_file_upload(
+pub async fn store_file(
     db: &database::Database,
     params: UploadParams,
     mut stream: BodyStream,
@@ -36,24 +36,32 @@ pub async fn handle_file_upload(
 
     let txn = db.transaction();
 
-    txn.create_commit(database::CreateCommitParams {
-        commit: &params.commit,
-        server: &params.server,
-        owner: &params.owner,
-        repo: &params.repo,
-    })
-    .or_else(|e| {
-        if e.kind() != Some(database::ErrorKind::CommitExists) {
-            return Err(HandleRequestError::from(e));
-        }
-        Ok(())
-    })?;
+    txn.create_repo_if_not_exists(
+        time,
+        database::CreateRepositoryParams {
+            server: &params.server,
+            owner: &params.owner,
+            repo: &params.repo,
+        },
+    )?;
 
-    txn.create_artifact(database::CreateArtifactParams {
-        time: &time,
-        commit: &params.commit,
-        path: &params.path,
-    })?;
+    txn.create_commit_if_not_exists(
+        time,
+        database::CreateCommitParams {
+            commit: &params.commit,
+            server: &params.server,
+            owner: &params.owner,
+            repo: &params.repo,
+        },
+    )?;
+
+    txn.create_artifact(
+        time,
+        database::CreateArtifactParams {
+            commit: &params.commit,
+            path: &params.path,
+        },
+    )?;
 
     fs::create_dir_all(dir)?;
     let mut file = fs::File::create(path)?;
