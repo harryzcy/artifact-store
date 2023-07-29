@@ -24,10 +24,7 @@ pub fn router(db: database::Database) -> Router {
 
     Router::new()
         .route("/", get(index_handler))
-        .route(
-            "/upload/:server/:owner/:repo/:commit/*path",
-            put(upload_handler),
-        )
+        .route("/:server/:owner/:repo/:commit/*path", put(upload_handler))
         .route("/:server/:owner/:repo/:commit/*path", get(download_handler))
         .with_state(Arc::clone(&shared_state))
 }
