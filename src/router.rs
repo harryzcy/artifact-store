@@ -47,7 +47,7 @@ async fn upload_handler(
     stream: BodyStream,
 ) -> Json<Response> {
     let db = &state.read().await.db;
-    match storage::handle_file_upload(db, params, stream).await {
+    match storage::store_file(db, params, stream).await {
         Ok(_) => (),
         Err(e) => {
             let response = Response {
