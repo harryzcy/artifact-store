@@ -22,7 +22,7 @@ pub struct UploadParams {
     path: String,
 }
 
-pub async fn handle_file_upload(
+pub async fn store_file(
     db: &database::Database,
     params: UploadParams,
     mut stream: BodyStream,
