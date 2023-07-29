@@ -24,7 +24,6 @@ pub enum Transaction<'db> {
 
 impl Transaction<'_> {
     /// Stores the repository data in the database
-    /// If the repository already exists, do nothing.
     pub fn create_repo_if_not_exists(
         &self,
         time: u128,
@@ -47,29 +46,40 @@ impl Transaction<'_> {
     }
 
     /// Store the commit data in the database.
-    /// If the commit already exists, return an error.
-    pub fn create_commit(&self, params: CreateCommitParams) -> Result<(), Error> {
-        let commit_key = format!("commit:{}", params.commit);
-        let commit_value = format!("{}/{}/{}", params.server, params.owner, params.repo);
+    pub fn create_commit_if_not_exists(
+        &self,
+        time: u128,
+        params: CreateCommitParams,
+    ) -> Result<(), Error> {
+        let commit_key = format!(
+            "commit#{}#{}#{}#{}",
+            params.server, params.owner, params.repo, params.commit
+        );
+        let commit_value = time.to_be_bytes();
 
-        let repo_key = format!("repo:{}/{}", commit_value, params.commit);
-        let repo_value = params.commit;
+        let commit_time_key = [
+            format!(
+                "commit_time#{}#{}#{}#",
+                params.server, params.owner, params.repo
+            )
+            .as_bytes(),
+            &time.to_be_bytes(),
+        ]
+        .concat();
+        let commit_time_value = params.commit.as_bytes();
 
         match self {
             Transaction::RocksDB(tx) => {
                 let commit_key_bytes = commit_key.as_bytes();
                 let exists = tx.get(commit_key_bytes)?.is_some();
                 if exists {
-                    return Err(Error::Generic(format!(
-                        "commit already exists: {}",
-                        params.commit
-                    )));
+                    return Ok(());
                 }
-                tx.put(commit_key_bytes, commit_value.as_bytes())?;
-                tx.put(repo_key.as_bytes(), repo_value.as_bytes())?;
-                Ok(())
+                tx.put(commit_key_bytes, commit_value)?;
+                tx.put(commit_time_key, commit_time_value)?;
             }
         }
+        Ok(())
     }
 
     /// Store the artifact data in the database.
@@ -179,13 +189,14 @@ mod tests {
     fn test_create_commit() {
         let db = Database::new_rocksdb("data/test_create_commit").unwrap();
         let tx = db.transaction();
+        let time = 1234567890;
         let params = CreateCommitParams {
             commit: &"1234567890abcdef".to_string(),
             server: &"github.com".to_string(),
             owner: &"owner".to_string(),
             repo: &"repo".to_string(),
         };
-        tx.create_commit(params).unwrap();
+        tx.create_commit_if_not_exists(time, params).unwrap();
         tx.commit().unwrap();
 
         remove_db("data/test_create_commit");
@@ -195,15 +206,17 @@ mod tests {
     fn test_create_commit_twice() {
         let db = Database::new_rocksdb("data/test_create_commit_twice").unwrap();
         let tx = db.transaction();
+        let time = 1234567890;
         let params = CreateCommitParams {
             commit: &"1234567890abcdef".to_string(),
             server: &"github.com".to_string(),
             owner: &"owner".to_string(),
             repo: &"repo".to_string(),
         };
-        tx.create_commit(params.clone()).unwrap();
-        let err = tx.create_commit(params.clone()).unwrap_err();
-        assert_eq!(err.kind(), Some(ErrorKind::CommitExists));
+        tx.create_commit_if_not_exists(time, params.clone())
+            .unwrap();
+        tx.create_commit_if_not_exists(time, params.clone())
+            .unwrap();
 
         remove_db("data/test_create_commit_twice");
     }

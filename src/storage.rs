@@ -45,18 +45,15 @@ pub async fn handle_file_upload(
         },
     )?;
 
-    txn.create_commit(database::CreateCommitParams {
-        commit: &params.commit,
-        server: &params.server,
-        owner: &params.owner,
-        repo: &params.repo,
-    })
-    .or_else(|e| {
-        if e.kind() != Some(database::ErrorKind::CommitExists) {
-            return Err(HandleRequestError::from(e));
-        }
-        Ok(())
-    })?;
+    txn.create_commit_if_not_exists(
+        time,
+        database::CreateCommitParams {
+            commit: &params.commit,
+            server: &params.server,
+            owner: &params.owner,
+            repo: &params.repo,
+        },
+    )?;
 
     txn.create_artifact(database::CreateArtifactParams {
         time: &time,
