@@ -85,15 +85,14 @@ impl Transaction<'_> {
     /// Store the artifact data in the database.
     /// If the artifact already exists, return an error.
     pub fn create_artifact(&self, params: CreateArtifactParams) -> Result<(), Error> {
-        let artifact_key = [
-            format!("artifact:{}", params.commit).as_bytes(),
-            &params.time.to_be_bytes(),
-        ]
-        .concat();
+        let key = format!(
+            "artifact#{}#{}#{}",
+            params.commit, params.commit, params.path
+        );
 
         match self {
             Transaction::RocksDB(tx) => {
-                let exists = tx.get(&artifact_key)?.is_some();
+                let exists = tx.get(&key)?.is_some();
                 if exists {
                     return Err(Error::Generic(format!(
                         "artifact already exists: {}",
@@ -101,7 +100,7 @@ impl Transaction<'_> {
                     )));
                 }
 
-                tx.put(&artifact_key, params.commit.as_bytes())?;
+                tx.put(&key, params.commit.as_bytes())?;
                 Ok(())
             }
         }
@@ -114,33 +113,10 @@ impl Transaction<'_> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ErrorKind {
-    CommitExists,
-    ArtifactExists,
-}
-
 #[derive(Debug)]
 pub enum Error {
     RocksDB(rocksdb::Error),
     Generic(String),
-}
-
-impl Error {
-    pub fn kind(&self) -> Option<ErrorKind> {
-        match self {
-            Error::Generic(e) => {
-                if e.contains("commit already exists") {
-                    Some(ErrorKind::CommitExists)
-                } else if e.contains("artifact already exists") {
-                    Some(ErrorKind::ArtifactExists)
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
-    }
 }
 
 impl From<rocksdb::Error> for Error {
@@ -247,7 +223,7 @@ mod tests {
         };
         tx.create_artifact(params.clone()).unwrap();
         let err = tx.create_artifact(params.clone()).unwrap_err();
-        assert_eq!(err.kind(), Some(ErrorKind::ArtifactExists));
+        assert!(matches!(err, Error::Generic(_)));
 
         remove_db("data/test_create_artifact_twice");
     }
