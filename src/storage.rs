@@ -4,9 +4,11 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use axum::extract::BodyStream;
+use axum::{body::StreamBody, extract::BodyStream};
 use futures_util::StreamExt;
 use serde::Deserialize;
+use tokio::fs::File;
+use tokio_util::io::ReaderStream;
 
 use crate::database;
 use crate::error::HandleRequestError;
@@ -89,8 +91,27 @@ pub struct DownloadParams {
 pub async fn prepare_download_file(
     db: &database::Database,
     params: DownloadParams,
-) -> Result<String, HandleRequestError> {
-    let txn = db.transaction();
+) -> Result<(String, StreamBody<ReaderStream<File>>), HandleRequestError> {
+    let exists = db.exists_artifact(database::ExistsArtifactParams {
+        server: &params.server,
+        owner: &params.owner,
+        repo: &params.repo,
+        commit: &params.commit,
+        path: &params.path,
+    })?;
+    if !exists {
+        return Err(HandleRequestError::NotFound);
+    }
 
-    Ok("".to_string())
+    let path = format!(
+        "{}/{}/{}/{}/{}/{}",
+        DATA_DIR, params.server, params.owner, params.repo, params.commit, params.path
+    );
+    let file = match File::open(path).await {
+        Ok(file) => file,
+        Err(_) => return Err(HandleRequestError::NotFound),
+    };
+    let stream: ReaderStream<File> = ReaderStream::new(file);
+    let body = StreamBody::new(stream);
+    Ok((params.path, body))
 }

@@ -6,6 +6,7 @@ use axum::{
     routing::{get, put},
     Json, Router,
 };
+use hyper::{header, StatusCode};
 use serde::Serialize;
 use tokio::sync::RwLock;
 
@@ -70,22 +71,17 @@ async fn download_handler(
     State(state): State<SharedState>,
 ) -> impl IntoResponse {
     let db = &state.read().await.db;
-    match storage::prepare_download_file(db, params).await {
-        Ok(_) => (),
-        Err(e) => {
-            let response = Response {
-                code: 500,
-                message: format!("{}", e),
-            };
-            return Json(response);
-        }
-    }
-
-    let response = Response {
-        code: 200,
-        message: String::from("OK"),
+    let (filename, body) = match storage::prepare_download_file(db, params).await {
+        Ok(result) => result,
+        Err(e) => return Err((StatusCode::NOT_FOUND, format!("File not found: {}", e))),
     };
-    Json(response)
+
+    let headers = [(
+        header::CONTENT_DISPOSITION,
+        format!("attachment; filename=\"{:?}\"", filename),
+    )];
+
+    Ok((headers, body))
 }
 
 #[cfg(test)]

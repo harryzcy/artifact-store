@@ -17,10 +17,23 @@ impl Database {
         }
     }
 
-    pub fn exists_artifact(&self, params: GetArtifactParams) -> Result<bool, Error> {
-        let key = format!("artifact:{}/{}/{}", params.commit, params.path, params.time);
+    pub fn exists_artifact(&self, params: ExistsArtifactParams) -> Result<bool, Error> {
+        let commit_key = format!(
+            "commit#{}#{}#{}#{}",
+            params.server, params.owner, params.repo, params.commit
+        );
+        let exists = match self {
+            Database::RocksDB(db) => db.get(commit_key.as_bytes())?.is_some(),
+        };
+        if !exists {
+            return Ok(false);
+        }
 
-        Ok(false)
+        let artifact_key = format!("artifact#{}#{}", params.commit, params.path);
+        let exists = match self {
+            Database::RocksDB(db) => db.get(artifact_key.as_bytes())?.is_some(),
+        };
+        Ok(exists)
     }
 }
 
@@ -159,7 +172,10 @@ pub struct CreateArtifactParams<'a> {
 }
 
 #[derive(Clone)]
-pub struct GetArtifactParams<'a> {
+pub struct ExistsArtifactParams<'a> {
+    pub server: &'a String,
+    pub owner: &'a String,
+    pub repo: &'a String,
     pub commit: &'a String,
     pub path: &'a String,
 }
