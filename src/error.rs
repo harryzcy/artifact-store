@@ -9,7 +9,7 @@ pub enum HandleRequestError {
     AxumError(axum::Error),
     RocksDBError(rocksdb::Error),
     Generic(String),
-    NotFound,
+    NotFound(String),
 }
 
 impl fmt::Display for HandleRequestError {
@@ -20,7 +20,7 @@ impl fmt::Display for HandleRequestError {
             HandleRequestError::AxumError(e) => write!(f, "Axum error: {}", e),
             HandleRequestError::RocksDBError(e) => write!(f, "RocksDB error: {}", e),
             HandleRequestError::Generic(s) => write!(f, "Generic error: {}", s),
-            HandleRequestError::NotFound => write!(f, "Not found"),
+            HandleRequestError::NotFound(s) => write!(f, "Not found: {}", s),
         }
     }
 }

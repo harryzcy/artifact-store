@@ -100,7 +100,7 @@ pub async fn prepare_download_file(
         path: &params.path,
     })?;
     if !exists {
-        return Err(HandleRequestError::NotFound);
+        return Err(HandleRequestError::NotFound(params.path));
     }
 
     let path = format!(
@@ -109,7 +109,7 @@ pub async fn prepare_download_file(
     );
     let file = match File::open(path).await {
         Ok(file) => file,
-        Err(_) => return Err(HandleRequestError::NotFound),
+        Err(_) => return Err(HandleRequestError::NotFound(params.path)),
     };
     let stream: ReaderStream<File> = ReaderStream::new(file);
     let body = StreamBody::new(stream);

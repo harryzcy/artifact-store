@@ -10,8 +10,8 @@ use hyper::{header, StatusCode};
 use serde::Serialize;
 use tokio::sync::RwLock;
 
-use crate::database;
 use crate::storage;
+use crate::{database, error::HandleRequestError};
 
 type SharedState = Arc<RwLock<RouterState>>;
 
@@ -73,7 +73,15 @@ async fn download_handler(
     let db = &state.read().await.db;
     let (filename, body) = match storage::prepare_download_file(db, params).await {
         Ok(result) => result,
-        Err(e) => return Err((StatusCode::NOT_FOUND, format!("File not found: {}", e))),
+        Err(e) => match e {
+            HandleRequestError::NotFound(filename) => {
+                return Err((
+                    StatusCode::NOT_FOUND,
+                    format!("File not found: {}", filename),
+                ))
+            }
+            _ => return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e))),
+        },
     };
 
     let headers = [(
