@@ -55,11 +55,13 @@ pub async fn handle_file_upload(
         },
     )?;
 
-    txn.create_artifact(database::CreateArtifactParams {
-        time: &time,
-        commit: &params.commit,
-        path: &params.path,
-    })?;
+    txn.create_artifact(
+        time,
+        database::CreateArtifactParams {
+            commit: &params.commit,
+            path: &params.path,
+        },
+    )?;
 
     fs::create_dir_all(dir)?;
     let mut file = fs::File::create(path)?;

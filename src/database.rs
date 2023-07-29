@@ -84,7 +84,7 @@ impl Transaction<'_> {
 
     /// Store the artifact data in the database.
     /// If the artifact already exists, return an error.
-    pub fn create_artifact(&self, params: CreateArtifactParams) -> Result<(), Error> {
+    pub fn create_artifact(&self, time: u128, params: CreateArtifactParams) -> Result<(), Error> {
         let key = format!(
             "artifact#{}#{}#{}",
             params.commit, params.commit, params.path
@@ -100,7 +100,7 @@ impl Transaction<'_> {
                     )));
                 }
 
-                tx.put(&key, params.commit.as_bytes())?;
+                tx.put(&key, time.to_be_bytes())?;
                 Ok(())
             }
         }
@@ -148,7 +148,6 @@ pub struct CreateCommitParams<'a> {
 
 #[derive(Clone)]
 pub struct CreateArtifactParams<'a> {
-    pub time: &'a u128,
     pub commit: &'a String,
     pub path: &'a String,
 }
@@ -201,12 +200,12 @@ mod tests {
     fn test_create_artifact() {
         let db = Database::new_rocksdb("data/test_create_artifact").unwrap();
         let tx = db.transaction();
+        let time = 1234567890;
         let params = CreateArtifactParams {
-            time: &1234567890,
             commit: &"1234567890abcdef".to_string(),
             path: &"path/to/artifact".to_string(),
         };
-        tx.create_artifact(params).unwrap();
+        tx.create_artifact(time, params).unwrap();
         tx.commit().unwrap();
 
         remove_db("data/test_create_artifact");
@@ -216,13 +215,13 @@ mod tests {
     fn test_create_artifact_twice() {
         let db = Database::new_rocksdb("data/test_create_artifact_twice").unwrap();
         let tx = db.transaction();
+        let time = 1234567890;
         let params = CreateArtifactParams {
-            time: &1234567890,
             commit: &"1234567890abcdef".to_string(),
             path: &"path/to/artifact".to_string(),
         };
-        tx.create_artifact(params.clone()).unwrap();
-        let err = tx.create_artifact(params.clone()).unwrap_err();
+        tx.create_artifact(time, params.clone()).unwrap();
+        let err = tx.create_artifact(time, params.clone()).unwrap_err();
         assert!(matches!(err, Error::Generic(_)));
 
         remove_db("data/test_create_artifact_twice");
