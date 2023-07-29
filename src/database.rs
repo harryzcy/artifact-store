@@ -39,7 +39,7 @@ impl Transaction<'_> {
                 if exists {
                     return Ok(());
                 }
-                tx.put(key_bytes, &value)?;
+                tx.put(key_bytes, value)?;
             }
         }
         Ok(())
