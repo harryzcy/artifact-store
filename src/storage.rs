@@ -36,6 +36,15 @@ pub async fn handle_file_upload(
 
     let txn = db.transaction();
 
+    txn.create_repo_if_not_exists(
+        time,
+        database::CreateRepositoryParams {
+            server: &params.server,
+            owner: &params.owner,
+            repo: &params.repo,
+        },
+    )?;
+
     txn.create_commit(database::CreateCommitParams {
         commit: &params.commit,
         server: &params.server,

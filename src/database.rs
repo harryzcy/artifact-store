@@ -23,6 +23,29 @@ pub enum Transaction<'db> {
 }
 
 impl Transaction<'_> {
+    /// Stores the repository data in the database
+    /// If the repository already exists, do nothing.
+    pub fn create_repo_if_not_exists(
+        &self,
+        time: u128,
+        params: CreateRepositoryParams,
+    ) -> Result<(), Error> {
+        let key = format!("repo#{}#{}#{}", params.server, params.owner, params.repo);
+        let value = time.to_be_bytes();
+
+        match self {
+            Transaction::RocksDB(tx) => {
+                let key_bytes = key.as_bytes();
+                let exists = tx.get(key_bytes)?.is_some();
+                if exists {
+                    return Ok(());
+                }
+                tx.put(key_bytes, &value)?;
+            }
+        }
+        Ok(())
+    }
+
     /// Store the commit data in the database.
     /// If the commit already exists, return an error.
     pub fn create_commit(&self, params: CreateCommitParams) -> Result<(), Error> {
@@ -120,6 +143,13 @@ impl From<String> for Error {
     fn from(e: String) -> Self {
         Error::Generic(e)
     }
+}
+
+#[derive(Clone)]
+pub struct CreateRepositoryParams<'a> {
+    pub server: &'a String,
+    pub owner: &'a String,
+    pub repo: &'a String,
 }
 
 #[derive(Clone)]
