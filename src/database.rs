@@ -65,20 +65,26 @@ impl Database {
     }
 
     pub fn get_repo_commits(&self, params: GetRepoCommitsParams) -> Result<Vec<CommitData>, Error> {
-        let key_start = format!(
-            "commit_time#{}#{}#{}#",
-            params.server, params.owner, params.repo
-        );
-        let key_end = format!(
-            "commit_time#{}#{}#{}$",
-            params.server, params.owner, params.repo,
-        );
+        let key_prefix = serialize_key(vec![
+            "commit_time".as_bytes(),
+            params.server.as_bytes(),
+            params.owner.as_bytes(),
+            params.repo.as_bytes(),
+        ]);
+        let mut key_start = key_prefix.clone();
+        key_start.push(b'#');
+
+        let mut key_end = key_prefix.clone();
+        key_end.push(b'$');
+
         let mut commits = Vec::new();
         match self {
             Database::RocksDB(db) => {
                 let mut iter = db.raw_iterator();
-                iter.seek(key_start.as_bytes());
-                while iter.valid() && iter.key().unwrap() < key_end.as_bytes() {
+                iter.seek(key_start);
+                while iter.valid()
+                    && iter.key().unwrap() < <Vec<u8> as AsRef<[u8]>>::as_ref(&key_end)
+                {
                     let raw_key = iter.key().unwrap();
                     let raw_value = iter.value().unwrap();
 
