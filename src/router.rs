@@ -25,8 +25,8 @@ pub fn router(db: database::Database) -> Router {
     Router::new()
         .route("/", get(index_handler))
         .route("/ping", get(ping_handler))
-        .route("/:server/:owner/:repo", get(get_commits_handler))
-        .route("/:server/:owner/:repo/:commit", get(get_artifacts_handler))
+        .route("/:server/:owner/:repo", get(list_commits_handler))
+        .route("/:server/:owner/:repo/:commit", get(list_artifacts_handler))
         .route("/:server/:owner/:repo/:commit/*path", put(upload_handler))
         .route("/:server/:owner/:repo/:commit/*path", get(download_handler))
         .with_state(Arc::clone(&shared_state))
@@ -46,7 +46,7 @@ struct Response {
     message: String,
 }
 
-async fn get_commits_handler(
+async fn list_commits_handler(
     Path(params): Path<storage::GetCommitsParams>,
     State(state): State<SharedState>,
 ) -> impl IntoResponse {
@@ -65,7 +65,7 @@ async fn get_commits_handler(
     serde_json::to_string(&response).unwrap()
 }
 
-async fn get_artifacts_handler(
+async fn list_artifacts_handler(
     Path(params): Path<storage::GetArtifactsParams>,
     State(state): State<SharedState>,
 ) -> impl IntoResponse {
