@@ -91,7 +91,8 @@ impl Database {
                     // parts: ["commit_time", server, owner, repo, time]
                     let key_parts = deserialize_key(raw_key);
                     let time_part = key_parts.last().unwrap();
-                    let time_millisecond = u32::from_ne_bytes(time_part[0..4].try_into().unwrap());
+                    let time_millisecond =
+                        u128::from_be_bytes(time_part[0..16].try_into().unwrap());
                     let time_seconds = (time_millisecond / 1000) as i64;
                     let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
 
@@ -344,12 +345,15 @@ mod tests {
         tx.create_commit_if_not_exists(time, params).unwrap();
         tx.commit().unwrap();
 
-        let commits = db.get_repo_commits(GetRepoCommitsParams {
-            server: &"github.com".to_string(),
-            owner: &"owner".to_string(),
-            repo: &"repo".to_string(),
-        });
-        assert_eq!(commits.unwrap().len(), 1);
+        let commits = db
+            .get_repo_commits(GetRepoCommitsParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+            })
+            .unwrap();
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits[0].commit, "1234567890abcdef");
 
         remove_db("data/test_get_commits");
     }
