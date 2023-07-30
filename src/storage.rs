@@ -50,6 +50,41 @@ pub async fn get_commits(
 }
 
 #[derive(Deserialize)]
+pub struct GetArtifactsParams {
+    server: String,
+    owner: String,
+    repo: String,
+    commit: String,
+}
+
+#[derive(Serialize)]
+pub struct GetArtifactsResponse {
+    pub server: String,
+    pub owner: String,
+    pub repo: String,
+    pub commit: String,
+    pub artifacts: Vec<database::ArtifactData>,
+}
+
+pub async fn get_artifacts(
+    db: &database::Database,
+    params: GetArtifactsParams,
+) -> Result<GetArtifactsResponse, HandleRequestError> {
+    let artifacts = db.get_artifacts(database::GetArtifactsParams {
+        commit: &params.commit,
+    })?;
+
+    let response = GetArtifactsResponse {
+        server: params.server,
+        owner: params.owner,
+        repo: params.repo,
+        commit: params.commit,
+        artifacts,
+    };
+    Ok(response)
+}
+
+#[derive(Deserialize)]
 pub struct UploadParams {
     commit: String,
     server: String,

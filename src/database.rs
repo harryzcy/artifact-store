@@ -27,6 +27,18 @@ pub struct ExistsArtifactParams<'a> {
 }
 
 #[derive(Clone)]
+pub struct GetArtifactsParams<'a> {
+    pub commit: &'a String,
+}
+
+#[derive(Clone, Serialize)]
+pub struct ArtifactData {
+    pub path: String,
+    #[serde(with = "time::serde::rfc3339")]
+    pub time: OffsetDateTime,
+}
+
+#[derive(Clone)]
 pub struct CreateCommitParams<'a> {
     pub commit: &'a String,
     pub server: &'a String,
@@ -153,6 +165,45 @@ impl Database {
             Database::RocksDB(db) => db.get(artifact_key)?.is_some(),
         };
         Ok(exists)
+    }
+
+    pub fn get_artifacts(&self, params: GetArtifactsParams) -> Result<Vec<ArtifactData>, Error> {
+        let key_prefix = serialize_key(vec!["artifact".as_bytes(), params.commit.as_bytes()]);
+        let mut key_start = key_prefix.clone();
+        key_start.push(b'#');
+
+        let mut key_end = key_prefix.clone();
+        key_end.push(b'$');
+
+        let mut artifacts = Vec::new();
+        match self {
+            Database::RocksDB(db) => {
+                let mut iter = db.raw_iterator();
+                iter.seek(key_start);
+                while iter.valid()
+                    && iter.key().unwrap() < <Vec<u8> as AsRef<[u8]>>::as_ref(&key_end)
+                {
+                    let raw_key = iter.key().unwrap();
+                    let raw_value = iter.value().unwrap();
+
+                    // parts: ["artifacts", commit, path]
+                    let key_parts = deserialize_key(raw_key);
+                    let path_raw = key_parts.last().unwrap();
+
+                    let value_str = std::str::from_utf8(raw_value).unwrap();
+                    let value = serde_json::from_str::<ArtifactValue>(value_str).unwrap();
+                    let time_seconds = (value.time_added / 1000) as i64;
+                    let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
+
+                    artifacts.push(ArtifactData {
+                        path: std::str::from_utf8(path_raw).unwrap().to_string(),
+                        time,
+                    });
+                    iter.next();
+                }
+                Ok(artifacts)
+            }
+        }
     }
 }
 
