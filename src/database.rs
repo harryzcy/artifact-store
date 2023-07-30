@@ -440,8 +440,8 @@ mod tests {
     }
 
     #[test]
-    fn test_get_commits() {
-        let db = Database::new_rocksdb("data/test_get_commits").unwrap();
+    fn test_list_commits() {
+        let db = Database::new_rocksdb("data/test_list_commits").unwrap();
         let tx = db.transaction();
         let time = 1234567890;
         let params = CreateCommitParams {
@@ -463,12 +463,12 @@ mod tests {
         assert_eq!(commits.len(), 1);
         assert_eq!(commits[0].commit, "1234567890abcdef");
 
-        remove_db("data/test_get_commits");
+        remove_db("data/test_list_commits");
     }
 
     #[test]
-    fn test_get_commits_order() {
-        let db = Database::new_rocksdb("data/test_get_commits_multiple").unwrap();
+    fn test_list_commits_order() {
+        let db = Database::new_rocksdb("data/test_list_commits_multiple").unwrap();
         let tx = db.transaction();
         let params = CreateCommitParams {
             commit: &"commit-1".to_string(),
@@ -497,7 +497,66 @@ mod tests {
         assert_eq!(commits[0].commit, "commit-2");
         assert_eq!(commits[1].commit, "commit-1");
 
-        remove_db("data/test_get_commits_multiple");
+        remove_db("data/test_list_commits_multiple");
+    }
+
+    #[test]
+    fn test_list_artifacts() {
+        let db = Database::new_rocksdb("data/test_list_artifacts").unwrap();
+        let tx = db.transaction();
+        let time_milliseconds = 1234567890 * 1000;
+        let params = CreateArtifactParams {
+            commit: &"1234567890abcdef".to_string(),
+            path: &"path/to/artifact".to_string(),
+        };
+        tx.create_artifact(time_milliseconds, params).unwrap();
+        tx.commit().unwrap();
+
+        let artifacts = db
+            .list_artifacts(GetArtifactsParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+                commit: &"1234567890abcdef".to_string(),
+            })
+            .unwrap();
+        assert_eq!(artifacts.len(), 1);
+        assert_eq!(artifacts[0].path, "path/to/artifact");
+        assert_eq!(artifacts[0].time.unix_timestamp(), 1234567890);
+
+        remove_db("data/test_list_artifacts");
+    }
+
+    #[test]
+    fn test_list_artifacts_multiple() {
+        let db = Database::new_rocksdb("data/test_list_artifacts").unwrap();
+        let tx = db.transaction();
+        let time_milliseconds = 1234567890 * 1000;
+        let params1 = CreateArtifactParams {
+            commit: &"1234567890abcdef".to_string(),
+            path: &"path/to/artifact-1".to_string(),
+        };
+        tx.create_artifact(time_milliseconds, params1).unwrap();
+        let params2 = CreateArtifactParams {
+            commit: &"1234567890abcdef".to_string(),
+            path: &"path/to/artifact-2".to_string(),
+        };
+        tx.create_artifact(time_milliseconds, params2).unwrap();
+        tx.commit().unwrap();
+
+        let artifacts = db
+            .list_artifacts(GetArtifactsParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+                commit: &"1234567890abcdef".to_string(),
+            })
+            .unwrap();
+        assert_eq!(artifacts.len(), 2);
+        assert_eq!(artifacts[0].path, "path/to/artifact-1");
+        assert_eq!(artifacts[1].path, "path/to/artifact-2");
+
+        remove_db("data/test_list_artifacts");
     }
 
     #[test]
