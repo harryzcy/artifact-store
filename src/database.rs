@@ -106,20 +106,27 @@ impl Database {
     }
 
     pub fn exists_artifact(&self, params: ExistsArtifactParams) -> Result<bool, Error> {
-        let commit_key = format!(
-            "commit#{}#{}#{}#{}",
-            params.server, params.owner, params.repo, params.commit
-        );
+        let commit_key = serialize_key(vec![
+            "commit".as_bytes(),
+            params.server.as_bytes(),
+            params.owner.as_bytes(),
+            params.repo.as_bytes(),
+            params.commit.as_bytes(),
+        ]);
         let exists = match self {
-            Database::RocksDB(db) => db.get(commit_key.as_bytes())?.is_some(),
+            Database::RocksDB(db) => db.get(commit_key)?.is_some(),
         };
         if !exists {
             return Ok(false);
         }
 
-        let artifact_key = format!("artifact#{}#{}", params.commit, params.path);
+        let artifact_key = serialize_key(vec![
+            "artifact".as_bytes(),
+            params.commit.as_bytes(),
+            params.path.as_bytes(),
+        ]);
         let exists = match self {
-            Database::RocksDB(db) => db.get(artifact_key.as_bytes())?.is_some(),
+            Database::RocksDB(db) => db.get(artifact_key)?.is_some(),
         };
         Ok(exists)
     }
@@ -136,17 +143,21 @@ impl Transaction<'_> {
         time: u128,
         params: CreateRepositoryParams,
     ) -> Result<(), Error> {
-        let key = format!("repo#{}#{}#{}", params.server, params.owner, params.repo);
+        let key = serialize_key(vec![
+            "repo".as_bytes(),
+            params.server.as_bytes(),
+            params.owner.as_bytes(),
+            params.repo.as_bytes(),
+        ]);
         let value = time.to_be_bytes();
 
         match self {
             Transaction::RocksDB(tx) => {
-                let key_bytes = key.as_bytes();
-                let exists = tx.get(key_bytes)?.is_some();
+                let exists = tx.get(&key)?.is_some();
                 if exists {
                     return Ok(());
                 }
-                tx.put(key_bytes, value)?;
+                tx.put(key, value)?;
             }
         }
         Ok(())
@@ -158,31 +169,31 @@ impl Transaction<'_> {
         time: u128,
         params: CreateCommitParams,
     ) -> Result<(), Error> {
-        let commit_key = format!(
-            "commit#{}#{}#{}#{}",
-            params.server, params.owner, params.repo, params.commit
-        );
+        let commit_key = serialize_key(vec![
+            "commit".as_bytes(),
+            params.server.as_bytes(),
+            params.owner.as_bytes(),
+            params.repo.as_bytes(),
+            params.commit.as_bytes(),
+        ]);
         let commit_value = time.to_be_bytes();
 
-        let commit_time_key = [
-            format!(
-                "commit_time#{}#{}#{}#",
-                params.server, params.owner, params.repo
-            )
-            .as_bytes(),
+        let commit_time_key = serialize_key(vec![
+            "commit_time".as_bytes(),
+            params.server.as_bytes(),
+            params.owner.as_bytes(),
+            params.repo.as_bytes(),
             &time.to_be_bytes(),
-        ]
-        .concat();
+        ]);
         let commit_time_value = params.commit.as_bytes();
 
         match self {
             Transaction::RocksDB(tx) => {
-                let commit_key_bytes = commit_key.as_bytes();
-                let exists = tx.get(commit_key_bytes)?.is_some();
+                let exists = tx.get(&commit_key)?.is_some();
                 if exists {
                     return Ok(());
                 }
-                tx.put(commit_key_bytes, commit_value)?;
+                tx.put(commit_key, commit_value)?;
                 tx.put(commit_time_key, commit_time_value)?;
             }
         }
@@ -192,7 +203,11 @@ impl Transaction<'_> {
     /// Store the artifact data in the database.
     /// If the artifact already exists, return an error.
     pub fn create_artifact(&self, time: u128, params: CreateArtifactParams) -> Result<(), Error> {
-        let key = format!("artifact#{}#{}", params.commit, params.path);
+        let key = serialize_key(vec![
+            "artifact".as_bytes(),
+            params.commit.as_bytes(),
+            params.path.as_bytes(),
+        ]);
 
         match self {
             Transaction::RocksDB(tx) => {
