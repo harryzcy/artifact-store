@@ -77,23 +77,19 @@ impl Database {
         match self {
             Database::RocksDB(db) => {
                 let mut iter = db.raw_iterator();
-                println!("key_start: {:?}", key_start);
-                println!("key_end: {:?}", key_end);
                 iter.seek(key_start.as_bytes());
                 while iter.valid() && iter.key().unwrap() < key_end.as_bytes() {
-                    println!("iter.key(): {:?}", iter.key().unwrap());
                     let raw_key = iter.key().unwrap();
                     let raw_value = iter.value().unwrap();
-                    let key = std::str::from_utf8(raw_key).unwrap();
-                    let value = std::str::from_utf8(raw_value).unwrap();
-                    let mut parts = key.split('#');
-                    parts.next(); // commit_time
-                    parts.next(); // server
-                    parts.next(); // owner
-                    parts.next(); // repo
-                    let time_millisecond = parts.next().unwrap().parse::<u128>().unwrap();
+
+                    // parts: ["commit_time", server, owner, repo, time]
+                    let key_parts = deserialize_key(raw_key);
+                    let time_part = key_parts.last().unwrap();
+                    let time_millisecond = u32::from_ne_bytes(time_part[0..4].try_into().unwrap());
                     let time_seconds = (time_millisecond / 1000) as i64;
                     let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
+
+                    let value = std::str::from_utf8(raw_value).unwrap();
                     commits.push(CommitData {
                         commit: value.to_string(),
                         time,
