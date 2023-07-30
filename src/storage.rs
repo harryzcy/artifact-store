@@ -40,13 +40,12 @@ pub async fn list_commits(
         repo: &params.repo,
     })?;
 
-    let response = GetCommitsResponse {
+    Ok(GetCommitsResponse {
         server: params.server,
         owner: params.owner,
         repo: params.repo,
         commits,
-    };
-    Ok(response)
+    })
 }
 
 #[derive(Deserialize)]
@@ -90,14 +89,13 @@ pub async fn list_artifacts(
         commit: &params.commit,
     })?;
 
-    let response = GetArtifactsResponse {
+    Ok(GetArtifactsResponse {
         server: params.server,
         owner: params.owner,
         repo: params.repo,
         commit: params.commit,
         artifacts,
-    };
-    Ok(response)
+    })
 }
 
 #[derive(Deserialize)]
