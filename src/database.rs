@@ -1,3 +1,6 @@
+use serde::Serialize;
+use time::OffsetDateTime;
+
 type TransactionDB = rocksdb::OptimisticTransactionDB;
 
 #[allow(dead_code)]
@@ -15,6 +18,45 @@ impl Database {
         match self {
             Database::RocksDB(db) => Transaction::RocksDB(db.transaction()),
         }
+    }
+
+    pub fn get_repo_commits(&self, params: GetRepoCommitsParams) -> Result<Vec<CommitData>, Error> {
+        let key_start = format!(
+            "commit_time#{}#{}#{}#{}",
+            params.server, params.owner, params.repo, 0
+        );
+        let key_end = format!(
+            "commit_time#{}#{}#{}#{}",
+            params.server,
+            params.owner,
+            params.repo,
+            u128::MAX
+        );
+        let mut commits = Vec::new();
+        match self {
+            Database::RocksDB(db) => {
+                let mut iter = db.raw_iterator();
+                iter.seek(key_start.as_bytes());
+                while iter.valid() && iter.key().unwrap() < key_end.as_bytes() {
+                    let key = iter.key().unwrap();
+                    let value = iter.value().unwrap();
+                    let key = std::str::from_utf8(key).unwrap();
+                    let value = std::str::from_utf8(value).unwrap();
+                    let mut parts = key.split('#');
+                    parts.next();
+                    let commit = parts.next().unwrap();
+                    let time = value.parse::<u128>().unwrap();
+                    let time = OffsetDateTime::from_unix_timestamp(time as i64 / 1000).unwrap();
+                    commits.push(CommitData {
+                        commit: commit.to_string(),
+                        time,
+                    });
+                    iter.next();
+                }
+            }
+        };
+
+        Ok(commits)
     }
 
     pub fn exists_artifact(&self, params: ExistsArtifactParams) -> Result<bool, Error> {
@@ -129,29 +171,27 @@ impl Transaction<'_> {
     }
 }
 
-#[derive(Debug)]
-pub enum Error {
-    RocksDB(rocksdb::Error),
-    Generic(String),
-}
-
-impl From<rocksdb::Error> for Error {
-    fn from(e: rocksdb::Error) -> Self {
-        Error::RocksDB(e)
-    }
-}
-
-impl From<String> for Error {
-    fn from(e: String) -> Self {
-        Error::Generic(e)
-    }
-}
-
 #[derive(Clone)]
-pub struct CreateRepositoryParams<'a> {
+pub struct GetRepoCommitsParams<'a> {
     pub server: &'a String,
     pub owner: &'a String,
     pub repo: &'a String,
+}
+
+#[derive(Clone, Serialize)]
+pub struct CommitData {
+    pub commit: String,
+    #[serde(with = "time::serde::rfc3339")]
+    pub time: OffsetDateTime,
+}
+
+#[derive(Clone)]
+pub struct ExistsArtifactParams<'a> {
+    pub server: &'a String,
+    pub owner: &'a String,
+    pub repo: &'a String,
+    pub commit: &'a String,
+    pub path: &'a String,
 }
 
 #[derive(Clone)]
@@ -169,12 +209,28 @@ pub struct CreateArtifactParams<'a> {
 }
 
 #[derive(Clone)]
-pub struct ExistsArtifactParams<'a> {
+pub struct CreateRepositoryParams<'a> {
     pub server: &'a String,
     pub owner: &'a String,
     pub repo: &'a String,
-    pub commit: &'a String,
-    pub path: &'a String,
+}
+
+#[derive(Debug)]
+pub enum Error {
+    RocksDB(rocksdb::Error),
+    Generic(String),
+}
+
+impl From<rocksdb::Error> for Error {
+    fn from(e: rocksdb::Error) -> Self {
+        Error::RocksDB(e)
+    }
+}
+
+impl From<String> for Error {
+    fn from(e: String) -> Self {
+        Error::Generic(e)
+    }
 }
 
 #[cfg(test)]

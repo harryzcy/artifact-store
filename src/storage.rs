@@ -6,7 +6,7 @@ use std::{
 
 use axum::{body::StreamBody, extract::BodyStream};
 use futures_util::StreamExt;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tokio::fs::File;
 use tokio_util::io::ReaderStream;
 
@@ -14,6 +14,40 @@ use crate::database;
 use crate::error::HandleRequestError;
 
 const DATA_DIR: &str = "data";
+
+#[derive(Deserialize)]
+pub struct GetCommitsParams {
+    server: String,
+    owner: String,
+    repo: String,
+}
+
+#[derive(Serialize)]
+pub struct GetCommitsResponse {
+    pub server: String,
+    pub owner: String,
+    pub repo: String,
+    pub commits: Vec<database::CommitData>,
+}
+
+pub async fn get_commits(
+    db: &database::Database,
+    params: GetCommitsParams,
+) -> Result<GetCommitsResponse, HandleRequestError> {
+    let commits = db.get_repo_commits(database::GetRepoCommitsParams {
+        server: &params.server,
+        owner: &params.owner,
+        repo: &params.repo,
+    })?;
+
+    let response = GetCommitsResponse {
+        server: params.server,
+        owner: params.owner,
+        repo: params.repo,
+        commits,
+    };
+    Ok(response)
+}
 
 #[derive(Deserialize)]
 pub struct UploadParams {
