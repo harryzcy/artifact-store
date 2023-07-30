@@ -24,6 +24,7 @@ pub fn router(db: database::Database) -> Router {
 
     Router::new()
         .route("/", get(index_handler))
+        .route("/:server/:owner/:repo", get(get_commits_handler))
         .route("/:server/:owner/:repo/:commit/*path", put(upload_handler))
         .route("/:server/:owner/:repo/:commit/*path", get(download_handler))
         .with_state(Arc::clone(&shared_state))
@@ -89,6 +90,24 @@ async fn download_handler(
     Ok((headers, body))
 }
 
+async fn get_commits_handler(
+    Path(params): Path<storage::GetCommitsParams>,
+    State(state): State<SharedState>,
+) -> impl IntoResponse {
+    let db = &state.read().await.db;
+    let response = match storage::get_commits(db, params).await {
+        Ok(res) => res,
+        Err(e) => {
+            let response = Response {
+                code: 500,
+                message: format!("{}", e),
+            };
+            return serde_json::to_string(&response).unwrap();
+        }
+    };
+
+    serde_json::to_string(&response).unwrap()
+}
 #[cfg(test)]
 mod tests {
     use super::*;
