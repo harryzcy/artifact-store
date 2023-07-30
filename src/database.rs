@@ -533,28 +533,44 @@ mod tests {
         let tx = db.transaction();
         let time_milliseconds = 1234567890 * 1000;
         let params1 = CreateArtifactParams {
-            commit: &"1234567890abcdef".to_string(),
+            commit: &"commit-1".to_string(),
             path: &"path/to/artifact-1".to_string(),
         };
         tx.create_artifact(time_milliseconds, params1).unwrap();
         let params2 = CreateArtifactParams {
-            commit: &"1234567890abcdef".to_string(),
+            commit: &"commit-1".to_string(),
             path: &"path/to/artifact-2".to_string(),
         };
         tx.create_artifact(time_milliseconds, params2).unwrap();
+        let params3 = CreateArtifactParams {
+            commit: &"commit-2".to_string(),
+            path: &"path/to/artifact-3".to_string(),
+        };
+        tx.create_artifact(time_milliseconds, params3).unwrap();
         tx.commit().unwrap();
 
-        let artifacts = db
+        let artifacts_commit_1 = db
             .list_artifacts(GetArtifactsParams {
                 server: &"github.com".to_string(),
                 owner: &"owner".to_string(),
                 repo: &"repo".to_string(),
-                commit: &"1234567890abcdef".to_string(),
+                commit: &"commit-1".to_string(),
             })
             .unwrap();
-        assert_eq!(artifacts.len(), 2);
-        assert_eq!(artifacts[0].path, "path/to/artifact-1");
-        assert_eq!(artifacts[1].path, "path/to/artifact-2");
+        assert_eq!(artifacts_commit_1.len(), 2);
+        assert_eq!(artifacts_commit_1[0].path, "path/to/artifact-1");
+        assert_eq!(artifacts_commit_1[1].path, "path/to/artifact-2");
+
+        let artifacts_commit_2 = db
+            .list_artifacts(GetArtifactsParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+                commit: &"commit-2".to_string(),
+            })
+            .unwrap();
+        assert_eq!(artifacts_commit_2.len(), 1);
+        assert_eq!(artifacts_commit_2[0].path, "path/to/artifact-3");
 
         remove_db("data/test_list_artifacts");
     }
