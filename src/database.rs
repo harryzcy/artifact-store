@@ -189,16 +189,6 @@ impl Database {
     }
 
     pub fn get_artifacts(&self, params: GetArtifactsParams) -> Result<Vec<ArtifactData>, Error> {
-        let exists = self.exists_commit(ExistsCommitParams {
-            server: params.server,
-            owner: params.owner,
-            repo: params.repo,
-            commit: params.commit,
-        })?;
-        if !exists {
-            return Ok(Vec::new());
-        }
-
         let key_prefix = serialize_key(vec!["artifact".as_bytes(), params.commit.as_bytes()]);
         let mut key_start = key_prefix.clone();
         key_start.push(b'#');

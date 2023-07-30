@@ -20,7 +20,7 @@ impl fmt::Display for HandleRequestError {
             HandleRequestError::AxumError(e) => write!(f, "Axum error: {}", e),
             HandleRequestError::RocksDBError(e) => write!(f, "RocksDB error: {}", e),
             HandleRequestError::Generic(s) => write!(f, "Generic error: {}", s),
-            HandleRequestError::NotFound(s) => write!(f, "Not found: {}", s),
+            HandleRequestError::NotFound(s) => write!(f, "{}", s),
         }
     }
 }

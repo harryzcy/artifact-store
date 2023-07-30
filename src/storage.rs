@@ -70,6 +70,19 @@ pub async fn get_artifacts(
     db: &database::Database,
     params: GetArtifactsParams,
 ) -> Result<GetArtifactsResponse, HandleRequestError> {
+    let exists = db.exists_commit(database::ExistsCommitParams {
+        server: &params.server,
+        owner: &params.owner,
+        repo: &params.repo,
+        commit: &params.commit,
+    })?;
+    if !exists {
+        return Err(HandleRequestError::NotFound(format!(
+            "commit {} not found",
+            params.commit
+        )));
+    }
+
     let artifacts = db.get_artifacts(database::GetArtifactsParams {
         server: &params.server,
         owner: &params.owner,
@@ -172,7 +185,10 @@ pub async fn prepare_download_file(
         path: &params.path,
     })?;
     if !exists {
-        return Err(HandleRequestError::NotFound(params.path));
+        return Err(HandleRequestError::NotFound(format!(
+            "file {} not found",
+            params.path
+        )));
     }
 
     let path = format!(
@@ -181,7 +197,12 @@ pub async fn prepare_download_file(
     );
     let file = match File::open(path).await {
         Ok(file) => file,
-        Err(_) => return Err(HandleRequestError::NotFound(params.path)),
+        Err(_) => {
+            return Err(HandleRequestError::NotFound(format!(
+                "file {} not found",
+                params.path
+            )))
+        }
     };
     let stream: ReaderStream<File> = ReaderStream::new(file);
     let body = StreamBody::new(stream);

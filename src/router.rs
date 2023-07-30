@@ -72,13 +72,19 @@ async fn list_artifacts_handler(
     let db = &state.read().await.db;
     let response = match storage::get_artifacts(db, params).await {
         Ok(res) => res,
-        Err(e) => {
-            let response = Response {
-                code: 500,
-                message: format!("{}", e),
-            };
-            return serde_json::to_string(&response).unwrap();
-        }
+        Err(e) => match e {
+            HandleRequestError::NotFound(message) => {
+                let response = Response { code: 404, message };
+                return serde_json::to_string(&response).unwrap();
+            }
+            _ => {
+                let response = Response {
+                    code: 500,
+                    message: format!("{}", e),
+                };
+                return serde_json::to_string(&response).unwrap();
+            }
+        },
     };
 
     serde_json::to_string(&response).unwrap()
@@ -116,11 +122,8 @@ async fn download_handler(
     let (filename, body) = match storage::prepare_download_file(db, params).await {
         Ok(result) => result,
         Err(e) => match e {
-            HandleRequestError::NotFound(filename) => {
-                return Err((
-                    StatusCode::NOT_FOUND,
-                    format!("File not found: {}", filename),
-                ))
+            HandleRequestError::NotFound(message) => {
+                return Err((StatusCode::NOT_FOUND, format!("{}", message)))
             }
             _ => return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e))),
         },
