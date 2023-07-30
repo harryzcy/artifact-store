@@ -4,6 +4,14 @@ use time::OffsetDateTime;
 type TransactionDB = rocksdb::OptimisticTransactionDB;
 
 #[derive(Clone)]
+pub struct ExistsCommitParams<'a> {
+    pub server: &'a String,
+    pub owner: &'a String,
+    pub repo: &'a String,
+    pub commit: &'a String,
+}
+
+#[derive(Clone)]
 pub struct GetRepoCommitsParams<'a> {
     pub server: &'a String,
     pub owner: &'a String,
@@ -28,6 +36,9 @@ pub struct ExistsArtifactParams<'a> {
 
 #[derive(Clone)]
 pub struct GetArtifactsParams<'a> {
+    pub server: &'a String,
+    pub owner: &'a String,
+    pub repo: &'a String,
     pub commit: &'a String,
 }
 
@@ -96,6 +107,20 @@ impl Database {
         }
     }
 
+    pub fn exists_commit(&self, params: ExistsCommitParams) -> Result<bool, Error> {
+        let commit_key = serialize_key(vec![
+            "commit".as_bytes(),
+            params.server.as_bytes(),
+            params.owner.as_bytes(),
+            params.repo.as_bytes(),
+            params.commit.as_bytes(),
+        ]);
+        let exists = match self {
+            Database::RocksDB(db) => db.get(commit_key)?.is_some(),
+        };
+        Ok(exists)
+    }
+
     pub fn get_repo_commits(&self, params: GetRepoCommitsParams) -> Result<Vec<CommitData>, Error> {
         let key_prefix = serialize_key(vec![
             "commit_time".as_bytes(),
@@ -142,16 +167,12 @@ impl Database {
     }
 
     pub fn exists_artifact(&self, params: ExistsArtifactParams) -> Result<bool, Error> {
-        let commit_key = serialize_key(vec![
-            "commit".as_bytes(),
-            params.server.as_bytes(),
-            params.owner.as_bytes(),
-            params.repo.as_bytes(),
-            params.commit.as_bytes(),
-        ]);
-        let exists = match self {
-            Database::RocksDB(db) => db.get(commit_key)?.is_some(),
-        };
+        let exists = self.exists_commit(ExistsCommitParams {
+            server: params.server,
+            owner: params.owner,
+            repo: params.repo,
+            commit: params.commit,
+        })?;
         if !exists {
             return Ok(false);
         }
@@ -168,6 +189,16 @@ impl Database {
     }
 
     pub fn get_artifacts(&self, params: GetArtifactsParams) -> Result<Vec<ArtifactData>, Error> {
+        let exists = self.exists_commit(ExistsCommitParams {
+            server: params.server,
+            owner: params.owner,
+            repo: params.repo,
+            commit: params.commit,
+        })?;
+        if !exists {
+            return Ok(Vec::new());
+        }
+
         let key_prefix = serialize_key(vec!["artifact".as_bytes(), params.commit.as_bytes()]);
         let mut key_start = key_prefix.clone();
         key_start.push(b'#');

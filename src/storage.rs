@@ -71,6 +71,9 @@ pub async fn get_artifacts(
     params: GetArtifactsParams,
 ) -> Result<GetArtifactsResponse, HandleRequestError> {
     let artifacts = db.get_artifacts(database::GetArtifactsParams {
+        server: &params.server,
+        owner: &params.owner,
+        repo: &params.repo,
         commit: &params.commit,
     })?;
 
