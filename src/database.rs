@@ -131,42 +131,26 @@ impl Database {
             params.owner.as_bytes(),
             params.repo.as_bytes(),
         ]);
-        let mut key_start = key_prefix.clone();
-        key_start.push(b'#');
 
-        let mut key_end = key_prefix.clone();
-        key_end.push(b'$');
+        self.get_by_prefix(
+            key_prefix,
+            |key, value| {
+                // parts: ["commit_time", server, owner, repo, time]
+                let key_parts = deserialize_key(key);
+                let time_part = key_parts.last().unwrap();
+                let time_millisecond = u128::from_be_bytes(time_part[0..16].try_into().unwrap());
+                let time_seconds = (time_millisecond / 1000) as i64;
+                let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
 
-        let mut commits = Vec::new();
-        match self {
-            Database::RocksDB(db) => {
-                let mut iter = db.raw_iterator();
-                iter.seek_for_prev(key_end);
-                while iter.valid()
-                    && iter.key().unwrap() > <Vec<u8> as AsRef<[u8]>>::as_ref(&key_start)
-                {
-                    let raw_key = iter.key().unwrap();
-                    let raw_value = iter.value().unwrap();
-
-                    // parts: ["commit_time", server, owner, repo, time]
-                    let key_parts = deserialize_key(raw_key);
-                    let time_part = key_parts.last().unwrap();
-                    let time_millisecond =
-                        u128::from_be_bytes(time_part[0..16].try_into().unwrap());
-                    let time_seconds = (time_millisecond / 1000) as i64;
-                    let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
-
-                    let value_str = std::str::from_utf8(raw_value).unwrap();
-                    let value = serde_json::from_str::<CommitTimeValue>(value_str).unwrap();
-                    commits.push(CommitData {
-                        commit: value.commit,
-                        time,
-                    });
-                    iter.prev();
-                }
-                Ok(commits)
-            }
-        }
+                let value_str = std::str::from_utf8(value).unwrap();
+                let value = serde_json::from_str::<CommitTimeValue>(value_str).unwrap();
+                Ok(CommitData {
+                    commit: value.commit,
+                    time,
+                })
+            },
+            Some(true),
+        )
     }
 
     pub fn exists_artifact(&self, params: ExistsArtifactParams) -> Result<bool, Error> {
@@ -193,39 +177,63 @@ impl Database {
 
     pub fn list_artifacts(&self, params: GetArtifactsParams) -> Result<Vec<ArtifactData>, Error> {
         let key_prefix = serialize_key(vec!["artifact".as_bytes(), params.commit.as_bytes()]);
+
+        self.get_by_prefix(
+            key_prefix,
+            |key, value| {
+                // parts: ["artifact", commit, path]
+                let key_parts = deserialize_key(key);
+                let path_raw = key_parts.last().unwrap();
+                let path = std::str::from_utf8(path_raw).unwrap().to_string();
+
+                let value_str = std::str::from_utf8(value).unwrap();
+                let value = serde_json::from_str::<ArtifactValue>(value_str).unwrap();
+                let time_seconds = (value.time_added / 1000) as i64;
+                let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
+
+                Ok(ArtifactData { path, time })
+            },
+            None,
+        )
+    }
+
+    fn get_by_prefix<T>(
+        &self,
+        key_prefix: Vec<u8>,
+        func: fn(key: &[u8], value: &[u8]) -> Result<T, Error>,
+        reverse: Option<bool>,
+    ) -> Result<Vec<T>, Error> {
         let mut key_start = key_prefix.clone();
         key_start.push(b'#');
 
         let mut key_end = key_prefix.clone();
         key_end.push(b'$');
 
-        let mut artifacts = Vec::new();
+        let mut result: Vec<T> = Vec::new();
         match self {
             Database::RocksDB(db) => {
                 let mut iter = db.raw_iterator();
-                iter.seek(key_start);
-                while iter.valid()
-                    && iter.key().unwrap() < <Vec<u8> as AsRef<[u8]>>::as_ref(&key_end)
-                {
-                    let raw_key = iter.key().unwrap();
-                    let raw_value = iter.value().unwrap();
-
-                    // parts: ["artifacts", commit, path]
-                    let key_parts = deserialize_key(raw_key);
-                    let path_raw = key_parts.last().unwrap();
-
-                    let value_str = std::str::from_utf8(raw_value).unwrap();
-                    let value = serde_json::from_str::<ArtifactValue>(value_str).unwrap();
-                    let time_seconds = (value.time_added / 1000) as i64;
-                    let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
-
-                    artifacts.push(ArtifactData {
-                        path: std::str::from_utf8(path_raw).unwrap().to_string(),
-                        time,
-                    });
-                    iter.next();
+                let should_reverse = reverse.unwrap_or(false);
+                if should_reverse {
+                    iter.seek_for_prev(&key_end);
+                } else {
+                    iter.seek(&key_start);
                 }
-                Ok(artifacts)
+                while iter.valid() {
+                    let raw_key = iter.key().unwrap();
+                    if !raw_key.starts_with(&key_prefix) {
+                        break;
+                    }
+                    let raw_value = iter.value().unwrap();
+                    let value = func(raw_key, raw_value)?;
+                    result.push(value);
+                    if should_reverse {
+                        iter.prev();
+                    } else {
+                        iter.next();
+                    }
+                }
+                Ok(result)
             }
         }
     }
