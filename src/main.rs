@@ -10,7 +10,6 @@ mod storage;
 #[tokio::main]
 async fn main() {
     let conf = config::load();
-
     let db = database::Database::new_rocksdb(&conf.rocksdb_path).unwrap();
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3001));
