@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
 type TransactionDB = rocksdb::OptimisticTransactionDB;
@@ -45,6 +45,26 @@ pub struct CreateRepositoryParams<'a> {
     pub server: &'a String,
     pub owner: &'a String,
     pub repo: &'a String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct RepoValue {
+    time_added: u128,
+}
+
+#[derive(Serialize, Deserialize)]
+struct CommitValue {
+    time_added: u128,
+}
+
+#[derive(Serialize, Deserialize)]
+struct CommitTimeValue {
+    commit: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct ArtifactValue {
+    time_added: u128,
 }
 
 #[allow(dead_code)]
@@ -96,9 +116,10 @@ impl Database {
                     let time_seconds = (time_millisecond / 1000) as i64;
                     let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
 
-                    let value = std::str::from_utf8(raw_value).unwrap();
+                    let value_str = std::str::from_utf8(raw_value).unwrap();
+                    let value = serde_json::from_str::<CommitTimeValue>(value_str).unwrap();
                     commits.push(CommitData {
-                        commit: value.to_string(),
+                        commit: value.commit,
                         time,
                     });
                     iter.prev();
@@ -152,7 +173,8 @@ impl Transaction<'_> {
             params.owner.as_bytes(),
             params.repo.as_bytes(),
         ]);
-        let value = time.to_be_bytes();
+        // let value = time.to_be_bytes();
+        let value = RepoValue { time_added: time };
 
         match self {
             Transaction::RocksDB(tx) => {
@@ -160,7 +182,7 @@ impl Transaction<'_> {
                 if exists {
                     return Ok(());
                 }
-                tx.put(key, value)?;
+                tx.put(key, serde_json::to_string(&value).unwrap().as_bytes())?;
             }
         }
         Ok(())
@@ -179,7 +201,7 @@ impl Transaction<'_> {
             params.repo.as_bytes(),
             params.commit.as_bytes(),
         ]);
-        let commit_value = time.to_be_bytes();
+        let commit_value = CommitValue { time_added: time };
 
         let commit_time_key = serialize_key(vec![
             "commit_time".as_bytes(),
@@ -188,7 +210,9 @@ impl Transaction<'_> {
             params.repo.as_bytes(),
             &time.to_be_bytes(),
         ]);
-        let commit_time_value = params.commit.as_bytes();
+        let commit_time_value = CommitTimeValue {
+            commit: params.commit.clone(),
+        };
 
         match self {
             Transaction::RocksDB(tx) => {
@@ -196,8 +220,16 @@ impl Transaction<'_> {
                 if exists {
                     return Ok(());
                 }
-                tx.put(commit_key, commit_value)?;
-                tx.put(commit_time_key, commit_time_value)?;
+                tx.put(
+                    commit_key,
+                    serde_json::to_string(&commit_value).unwrap().as_bytes(),
+                )?;
+                tx.put(
+                    commit_time_key,
+                    serde_json::to_string(&commit_time_value)
+                        .unwrap()
+                        .as_bytes(),
+                )?;
             }
         }
         Ok(())
@@ -211,6 +243,7 @@ impl Transaction<'_> {
             params.commit.as_bytes(),
             params.path.as_bytes(),
         ]);
+        let value = ArtifactValue { time_added: time };
 
         match self {
             Transaction::RocksDB(tx) => {
@@ -222,7 +255,7 @@ impl Transaction<'_> {
                     )));
                 }
 
-                tx.put(key, time.to_be_bytes())?;
+                tx.put(key, serde_json::to_string(&value).unwrap().as_bytes())?;
                 Ok(())
             }
         }
