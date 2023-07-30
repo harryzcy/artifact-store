@@ -24,6 +24,7 @@ pub fn router(db: database::Database) -> Router {
 
     Router::new()
         .route("/", get(index_handler))
+        .route("/ping", get(ping_handler))
         .route("/:server/:owner/:repo", get(get_commits_handler))
         .route("/:server/:owner/:repo/:commit/*path", put(upload_handler))
         .route("/:server/:owner/:repo/:commit/*path", get(download_handler))
@@ -32,6 +33,10 @@ pub fn router(db: database::Database) -> Router {
 
 async fn index_handler() -> Html<&'static str> {
     Html("<h1>Artifact Store</h1>")
+}
+
+async fn ping_handler() -> &'static str {
+    "pong"
 }
 
 #[derive(Serialize)]
@@ -117,7 +122,7 @@ mod tests {
 
     #[tokio::test]
     async fn index_route() {
-        let db = database::Database::new_rocksdb("data/test_router").unwrap();
+        let db = database::Database::new_rocksdb("data/test_index_route").unwrap();
         let app = router(db);
 
         let response = app
@@ -130,6 +135,24 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         assert_eq!(&body[..], b"<h1>Artifact Store</h1>");
 
-        std::fs::remove_dir_all("data/test_router").unwrap();
+        std::fs::remove_dir_all("data/test_index_route").unwrap();
+    }
+
+    #[tokio::test]
+    async fn ping_route() {
+        let db = database::Database::new_rocksdb("data/test_ping_route").unwrap();
+        let app = router(db);
+
+        let response = app
+            .oneshot(Request::builder().uri("/ping").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert_eq!(&body[..], b"pong");
+
+        std::fs::remove_dir_all("data/test_ping_route").unwrap();
     }
 }
