@@ -3,6 +3,50 @@ use time::OffsetDateTime;
 
 type TransactionDB = rocksdb::OptimisticTransactionDB;
 
+#[derive(Clone)]
+pub struct GetRepoCommitsParams<'a> {
+    pub server: &'a String,
+    pub owner: &'a String,
+    pub repo: &'a String,
+}
+
+#[derive(Clone, Serialize)]
+pub struct CommitData {
+    pub commit: String,
+    #[serde(with = "time::serde::rfc3339")]
+    pub time: OffsetDateTime,
+}
+
+#[derive(Clone)]
+pub struct ExistsArtifactParams<'a> {
+    pub server: &'a String,
+    pub owner: &'a String,
+    pub repo: &'a String,
+    pub commit: &'a String,
+    pub path: &'a String,
+}
+
+#[derive(Clone)]
+pub struct CreateCommitParams<'a> {
+    pub commit: &'a String,
+    pub server: &'a String,
+    pub owner: &'a String,
+    pub repo: &'a String,
+}
+
+#[derive(Clone)]
+pub struct CreateArtifactParams<'a> {
+    pub commit: &'a String,
+    pub path: &'a String,
+}
+
+#[derive(Clone)]
+pub struct CreateRepositoryParams<'a> {
+    pub server: &'a String,
+    pub owner: &'a String,
+    pub repo: &'a String,
+}
+
 #[allow(dead_code)]
 pub enum Database {
     RocksDB(TransactionDB),
@@ -38,17 +82,20 @@ impl Database {
                 let mut iter = db.raw_iterator();
                 iter.seek(key_start.as_bytes());
                 while iter.valid() && iter.key().unwrap() < key_end.as_bytes() {
-                    let key = iter.key().unwrap();
-                    let value = iter.value().unwrap();
-                    let key = std::str::from_utf8(key).unwrap();
-                    let value = std::str::from_utf8(value).unwrap();
+                    let raw_key = iter.key().unwrap();
+                    let raw_value = iter.value().unwrap();
+                    let key = std::str::from_utf8(raw_key).unwrap();
+                    let value = std::str::from_utf8(raw_value).unwrap();
                     let mut parts = key.split('#');
-                    parts.next();
-                    let commit = parts.next().unwrap();
-                    let time = value.parse::<u128>().unwrap();
-                    let time = OffsetDateTime::from_unix_timestamp(time as i64 / 1000).unwrap();
+                    parts.next(); // commit_time
+                    parts.next(); // server
+                    parts.next(); // owner
+                    parts.next(); // repo
+                    let time_millisecond = parts.next().unwrap().parse::<u128>().unwrap();
+                    let time_seconds = (time_millisecond / 1000) as i64;
+                    let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
                     commits.push(CommitData {
-                        commit: commit.to_string(),
+                        commit: value.to_string(),
                         time,
                     });
                     iter.next();
@@ -169,50 +216,6 @@ impl Transaction<'_> {
             Transaction::RocksDB(tx) => tx.commit(),
         }
     }
-}
-
-#[derive(Clone)]
-pub struct GetRepoCommitsParams<'a> {
-    pub server: &'a String,
-    pub owner: &'a String,
-    pub repo: &'a String,
-}
-
-#[derive(Clone, Serialize)]
-pub struct CommitData {
-    pub commit: String,
-    #[serde(with = "time::serde::rfc3339")]
-    pub time: OffsetDateTime,
-}
-
-#[derive(Clone)]
-pub struct ExistsArtifactParams<'a> {
-    pub server: &'a String,
-    pub owner: &'a String,
-    pub repo: &'a String,
-    pub commit: &'a String,
-    pub path: &'a String,
-}
-
-#[derive(Clone)]
-pub struct CreateCommitParams<'a> {
-    pub commit: &'a String,
-    pub server: &'a String,
-    pub owner: &'a String,
-    pub repo: &'a String,
-}
-
-#[derive(Clone)]
-pub struct CreateArtifactParams<'a> {
-    pub commit: &'a String,
-    pub path: &'a String,
-}
-
-#[derive(Clone)]
-pub struct CreateRepositoryParams<'a> {
-    pub server: &'a String,
-    pub owner: &'a String,
-    pub repo: &'a String,
 }
 
 #[derive(Debug)]
