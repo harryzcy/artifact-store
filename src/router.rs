@@ -51,7 +51,7 @@ async fn list_commits_handler(
     State(state): State<SharedState>,
 ) -> impl IntoResponse {
     let db = &state.read().await.db;
-    let response = match storage::get_commits(db, params).await {
+    let response = match storage::list_commits(db, params).await {
         Ok(res) => res,
         Err(e) => {
             let response = Response {
@@ -70,7 +70,7 @@ async fn list_artifacts_handler(
     State(state): State<SharedState>,
 ) -> impl IntoResponse {
     let db = &state.read().await.db;
-    let response = match storage::get_artifacts(db, params).await {
+    let response = match storage::list_artifacts(db, params).await {
         Ok(res) => res,
         Err(e) => match e {
             HandleRequestError::NotFound(message) => {

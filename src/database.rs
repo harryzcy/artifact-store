@@ -121,7 +121,10 @@ impl Database {
         Ok(exists)
     }
 
-    pub fn get_repo_commits(&self, params: GetRepoCommitsParams) -> Result<Vec<CommitData>, Error> {
+    pub fn list_repo_commits(
+        &self,
+        params: GetRepoCommitsParams,
+    ) -> Result<Vec<CommitData>, Error> {
         let key_prefix = serialize_key(vec![
             "commit_time".as_bytes(),
             params.server.as_bytes(),
@@ -188,7 +191,7 @@ impl Database {
         Ok(exists)
     }
 
-    pub fn get_artifacts(&self, params: GetArtifactsParams) -> Result<Vec<ArtifactData>, Error> {
+    pub fn list_artifacts(&self, params: GetArtifactsParams) -> Result<Vec<ArtifactData>, Error> {
         let key_prefix = serialize_key(vec!["artifact".as_bytes(), params.commit.as_bytes()]);
         let mut key_start = key_prefix.clone();
         key_start.push(b'#');
@@ -451,7 +454,7 @@ mod tests {
         tx.commit().unwrap();
 
         let commits = db
-            .get_repo_commits(GetRepoCommitsParams {
+            .list_repo_commits(GetRepoCommitsParams {
                 server: &"github.com".to_string(),
                 owner: &"owner".to_string(),
                 repo: &"repo".to_string(),
@@ -484,7 +487,7 @@ mod tests {
         tx.commit().unwrap();
 
         let commits = db
-            .get_repo_commits(GetRepoCommitsParams {
+            .list_repo_commits(GetRepoCommitsParams {
                 server: &"github.com".to_string(),
                 owner: &"owner".to_string(),
                 repo: &"repo".to_string(),

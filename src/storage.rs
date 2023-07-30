@@ -30,11 +30,11 @@ pub struct GetCommitsResponse {
     pub commits: Vec<database::CommitData>,
 }
 
-pub async fn get_commits(
+pub async fn list_commits(
     db: &database::Database,
     params: GetCommitsParams,
 ) -> Result<GetCommitsResponse, HandleRequestError> {
-    let commits = db.get_repo_commits(database::GetRepoCommitsParams {
+    let commits = db.list_repo_commits(database::GetRepoCommitsParams {
         server: &params.server,
         owner: &params.owner,
         repo: &params.repo,
@@ -66,7 +66,7 @@ pub struct GetArtifactsResponse {
     pub artifacts: Vec<database::ArtifactData>,
 }
 
-pub async fn get_artifacts(
+pub async fn list_artifacts(
     db: &database::Database,
     params: GetArtifactsParams,
 ) -> Result<GetArtifactsResponse, HandleRequestError> {
@@ -83,7 +83,7 @@ pub async fn get_artifacts(
         )));
     }
 
-    let artifacts = db.get_artifacts(database::GetArtifactsParams {
+    let artifacts = db.list_artifacts(database::GetArtifactsParams {
         server: &params.server,
         owner: &params.owner,
         repo: &params.repo,
