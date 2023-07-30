@@ -529,7 +529,7 @@ mod tests {
 
     #[test]
     fn test_list_artifacts_multiple() {
-        let db = Database::new_rocksdb("data/test_list_artifacts").unwrap();
+        let db = Database::new_rocksdb("data/test_list_artifacts_multiple").unwrap();
         let tx = db.transaction();
         let time_milliseconds = 1234567890 * 1000;
         let params1 = CreateArtifactParams {
@@ -572,7 +572,7 @@ mod tests {
         assert_eq!(artifacts_commit_2.len(), 1);
         assert_eq!(artifacts_commit_2[0].path, "path/to/artifact-3");
 
-        remove_db("data/test_list_artifacts");
+        remove_db("data/test_list_artifacts_multiple");
     }
 
     #[test]
