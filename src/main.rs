@@ -1,21 +1,21 @@
 use std::net::SocketAddr;
 use tokio::signal;
 
+mod config;
 mod database;
 mod error;
 mod router;
 mod storage;
 
-const ROCKSDB_PATH: &str = "data/rocksdb";
-
 #[tokio::main]
 async fn main() {
-    let db = database::Database::new_rocksdb(ROCKSDB_PATH).unwrap();
+    let conf = config::load();
+    let db = database::Database::new_rocksdb(&conf.rocksdb_path).unwrap();
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3001));
     println!("listening on {}", addr);
     axum::Server::bind(&addr)
-        .serve(router::router(db).into_make_service())
+        .serve(router::router(conf.data_dir, db).into_make_service())
         .with_graceful_shutdown(shutdown_signal())
         .await
         .unwrap();

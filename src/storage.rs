@@ -13,8 +13,6 @@ use tokio_util::io::ReaderStream;
 use crate::database;
 use crate::error::HandleRequestError;
 
-const DATA_DIR: &str = "data";
-
 #[derive(Deserialize)]
 pub struct GetCommitsParams {
     server: String,
@@ -108,6 +106,7 @@ pub struct UploadParams {
 }
 
 pub async fn store_file(
+    data_dir: &String,
     db: &database::Database,
     params: UploadParams,
     mut stream: BodyStream,
@@ -115,7 +114,7 @@ pub async fn store_file(
     let time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
     let dir = format!(
         "{}/{}/{}/{}/{}",
-        DATA_DIR, params.server, params.owner, params.repo, params.commit
+        data_dir, params.server, params.owner, params.repo, params.commit
     );
     let path = format!("{}/{}", dir, params.path);
 
@@ -172,6 +171,7 @@ pub struct DownloadParams {
 }
 
 pub async fn prepare_download_file(
+    data_dir: &String,
     db: &database::Database,
     params: DownloadParams,
 ) -> Result<(String, StreamBody<ReaderStream<File>>), HandleRequestError> {
@@ -191,7 +191,7 @@ pub async fn prepare_download_file(
 
     let path = format!(
         "{}/{}/{}/{}/{}/{}",
-        DATA_DIR, params.server, params.owner, params.repo, params.commit, params.path
+        data_dir, params.server, params.owner, params.repo, params.commit, params.path
     );
     let file = match File::open(path).await {
         Ok(file) => file,

@@ -16,11 +16,12 @@ use crate::{database, error::HandleRequestError};
 type SharedState = Arc<RwLock<RouterState>>;
 
 pub struct RouterState {
+    pub data_dir: String,
     pub db: database::Database,
 }
 
-pub fn router(db: database::Database) -> Router {
-    let shared_state = SharedState::new(RwLock::new(RouterState { db }));
+pub fn router(data_dir: String, db: database::Database) -> Router {
+    let shared_state = SharedState::new(RwLock::new(RouterState { data_dir, db }));
 
     Router::new()
         .route("/", get(index_handler))
@@ -95,8 +96,9 @@ async fn upload_handler(
     State(state): State<SharedState>,
     stream: BodyStream,
 ) -> Json<Response> {
+    let data_dir = &state.read().await.data_dir;
     let db = &state.read().await.db;
-    match storage::store_file(db, params, stream).await {
+    match storage::store_file(data_dir, db, params, stream).await {
         Ok(_) => (),
         Err(e) => {
             let response = Response {
@@ -118,8 +120,9 @@ async fn download_handler(
     Path(params): Path<storage::DownloadParams>,
     State(state): State<SharedState>,
 ) -> impl IntoResponse {
+    let data_dir = &state.read().await.data_dir;
     let db = &state.read().await.db;
-    let (filename, body) = match storage::prepare_download_file(db, params).await {
+    let (filename, body) = match storage::prepare_download_file(data_dir, db, params).await {
         Ok(result) => result,
         Err(e) => match e {
             HandleRequestError::NotFound(message) => {
@@ -146,8 +149,9 @@ mod tests {
 
     #[tokio::test]
     async fn index_route() {
+        let data_dir = "data".to_string();
         let db = database::Database::new_rocksdb("data/test_index_route").unwrap();
-        let app = router(db);
+        let app = router(data_dir, db);
 
         let response = app
             .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
@@ -164,8 +168,9 @@ mod tests {
 
     #[tokio::test]
     async fn ping_route() {
+        let data_dir = "data".to_string();
         let db = database::Database::new_rocksdb("data/test_ping_route").unwrap();
-        let app = router(db);
+        let app = router(data_dir, db);
 
         let response = app
             .oneshot(Request::builder().uri("/ping").body(Body::empty()).unwrap())
