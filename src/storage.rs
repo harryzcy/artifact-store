@@ -12,8 +12,7 @@ use tokio_util::io::ReaderStream;
 
 use crate::database;
 use crate::error::HandleRequestError;
-
-const DATA_DIR: &str = "data";
+use crate::DATA_DIR;
 
 #[derive(Deserialize)]
 pub struct GetCommitsParams {

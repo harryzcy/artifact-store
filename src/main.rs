@@ -6,6 +6,7 @@ mod error;
 mod router;
 mod storage;
 
+const DATA_DIR: &str = "data";
 const ROCKSDB_PATH: &str = "data/rocksdb";
 
 #[tokio::main]
