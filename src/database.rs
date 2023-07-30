@@ -66,22 +66,22 @@ impl Database {
 
     pub fn get_repo_commits(&self, params: GetRepoCommitsParams) -> Result<Vec<CommitData>, Error> {
         let key_start = format!(
-            "commit_time#{}#{}#{}#{}",
-            params.server, params.owner, params.repo, 0
+            "commit_time#{}#{}#{}#",
+            params.server, params.owner, params.repo
         );
         let key_end = format!(
-            "commit_time#{}#{}#{}#{}",
-            params.server,
-            params.owner,
-            params.repo,
-            u128::MAX
+            "commit_time#{}#{}#{}$",
+            params.server, params.owner, params.repo,
         );
         let mut commits = Vec::new();
         match self {
             Database::RocksDB(db) => {
                 let mut iter = db.raw_iterator();
+                println!("key_start: {:?}", key_start);
+                println!("key_end: {:?}", key_end);
                 iter.seek(key_start.as_bytes());
                 while iter.valid() && iter.key().unwrap() < key_end.as_bytes() {
+                    println!("iter.key(): {:?}", iter.key().unwrap());
                     let raw_key = iter.key().unwrap();
                     let raw_value = iter.value().unwrap();
                     let key = std::str::from_utf8(raw_key).unwrap();
@@ -100,10 +100,9 @@ impl Database {
                     });
                     iter.next();
                 }
+                Ok(commits)
             }
-        };
-
-        Ok(commits)
+        }
     }
 
     pub fn exists_artifact(&self, params: ExistsArtifactParams) -> Result<bool, Error> {
@@ -236,12 +235,106 @@ impl From<String> for Error {
     }
 }
 
+fn serialize_key(parts: Vec<&[u8]>) -> Vec<u8> {
+    let mut result: Vec<u8> = Vec::new();
+    for i in 0..parts.len() {
+        let part = parts[i];
+        for byte in part {
+            if *byte == b'#' {
+                result.push(b'\\');
+            }
+            result.push(*byte);
+        }
+        if i < parts.len() - 1 {
+            result.push(b'#');
+        }
+    }
+    result
+}
+
+fn deserialize_key(key: &[u8]) -> Vec<Vec<u8>> {
+    let mut result: Vec<Vec<u8>> = Vec::new();
+    let mut part: Vec<u8> = Vec::new();
+    let mut escape = false;
+    for byte in key {
+        if escape {
+            part.push(*byte);
+            escape = false;
+        } else if *byte == b'\\' {
+            escape = true;
+        } else if *byte == b'#' {
+            result.push(part);
+            part = Vec::new();
+        } else {
+            part.push(*byte);
+        }
+    }
+    result.push(part);
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn remove_db(path: &str) {
         let _ = std::fs::remove_dir_all(path);
+    }
+
+    #[test]
+    fn test_key_simple() {
+        let key = serialize_key(vec![
+            "repo".as_bytes(),
+            "github.com".as_bytes(),
+            "owner".as_bytes(),
+        ]);
+        assert_eq!(key, "repo#github.com#owner".as_bytes());
+
+        let deserialized = deserialize_key(&key);
+        assert_eq!(deserialized.len(), 3);
+        assert_eq!(deserialized[0], "repo".as_bytes());
+        assert_eq!(deserialized[1], "github.com".as_bytes());
+        assert_eq!(deserialized[2], "owner".as_bytes());
+    }
+
+    #[test]
+    fn test_key_separator_escape() {
+        let key = serialize_key(vec![
+            "repo".as_bytes(),
+            "github.com".as_bytes(),
+            "owner#with#hashes".as_bytes(),
+        ]);
+        assert_eq!(key, "repo#github.com#owner\\#with\\#hashes".as_bytes());
+
+        let deserialized = deserialize_key(&key);
+        assert_eq!(deserialized.len(), 3);
+        assert_eq!(deserialized[0], "repo".as_bytes());
+        assert_eq!(deserialized[1], "github.com".as_bytes());
+        assert_eq!(deserialized[2], "owner#with#hashes".as_bytes());
+    }
+
+    #[test]
+    fn test_get_commits() {
+        let db = Database::new_rocksdb("data/test_get_commits").unwrap();
+        let tx = db.transaction();
+        let time = 1234567890;
+        let params = CreateCommitParams {
+            commit: &"1234567890abcdef".to_string(),
+            server: &"github.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo".to_string(),
+        };
+        tx.create_commit_if_not_exists(time, params).unwrap();
+        tx.commit().unwrap();
+
+        let commits = db.get_repo_commits(GetRepoCommitsParams {
+            server: &"github.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo".to_string(),
+        });
+        assert_eq!(commits.unwrap().len(), 1);
+
+        remove_db("data/test_get_commits");
     }
 
     #[test]
