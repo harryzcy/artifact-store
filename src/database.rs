@@ -81,9 +81,9 @@ impl Database {
         match self {
             Database::RocksDB(db) => {
                 let mut iter = db.raw_iterator();
-                iter.seek(key_start);
+                iter.seek_for_prev(key_end);
                 while iter.valid()
-                    && iter.key().unwrap() < <Vec<u8> as AsRef<[u8]>>::as_ref(&key_end)
+                    && iter.key().unwrap() > <Vec<u8> as AsRef<[u8]>>::as_ref(&key_start)
                 {
                     let raw_key = iter.key().unwrap();
                     let raw_value = iter.value().unwrap();
@@ -100,7 +100,7 @@ impl Database {
                         commit: value.to_string(),
                         time,
                     });
-                    iter.next();
+                    iter.prev();
                 }
                 Ok(commits)
             }
@@ -352,6 +352,40 @@ mod tests {
         assert_eq!(commits.unwrap().len(), 1);
 
         remove_db("data/test_get_commits");
+    }
+
+    #[test]
+    fn test_get_commits_order() {
+        let db = Database::new_rocksdb("data/test_get_commits_multiple").unwrap();
+        let tx = db.transaction();
+        let params = CreateCommitParams {
+            commit: &"commit-1".to_string(),
+            server: &"github.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo".to_string(),
+        };
+        tx.create_commit_if_not_exists(1234567890, params).unwrap();
+        let params = CreateCommitParams {
+            commit: &"commit-2".to_string(),
+            server: &"github.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo".to_string(),
+        };
+        tx.create_commit_if_not_exists(1234567891, params).unwrap();
+        tx.commit().unwrap();
+
+        let commits = db
+            .get_repo_commits(GetRepoCommitsParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+            })
+            .unwrap();
+        assert_eq!(commits.len(), 2);
+        assert_eq!(commits[0].commit, "commit-2");
+        assert_eq!(commits[1].commit, "commit-1");
+
+        remove_db("data/test_get_commits_multiple");
     }
 
     #[test]
