@@ -26,7 +26,7 @@ pub fn router(data_dir: String, db: database::Database) -> Router {
     Router::new()
         .route("/", get(index_handler))
         .route("/ping", get(ping_handler))
-        .route("/repos", get(list_repos_handler))
+        .route("/repositories", get(list_repos_handler))
         .route("/:server/:owner/:repo", get(list_commits_handler))
         .route("/:server/:owner/:repo/:commit", get(list_artifacts_handler))
         .route("/:server/:owner/:repo/:commit/*path", put(upload_handler))
