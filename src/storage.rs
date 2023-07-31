@@ -91,8 +91,6 @@ pub async fn list_artifacts(
         commit = params.commit.clone();
     }
 
-    if !is_latest {}
-
     let artifacts = db.list_artifacts(database::GetArtifactsParams {
         server: &params.server,
         owner: &params.owner,
