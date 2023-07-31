@@ -174,10 +174,10 @@ impl Database {
                 let mut iter = db.raw_iterator();
                 iter.seek_for_prev(&search_key);
                 if iter.valid() {
-                    let key = iter.key().unwrap();
-                    let key_parts = deserialize_key(key);
-                    let commit = String::from_utf8(key_parts[4].to_vec()).unwrap();
-                    return Ok(commit);
+                    let value_raw = iter.value().unwrap();
+                    let value_str = std::str::from_utf8(value_raw).unwrap();
+                    let value = serde_json::from_str::<CommitTimeValue>(value_str).unwrap();
+                    return Ok(value.commit);
                 }
                 Err(Error::Generic("no commits found".to_string()))
             }
@@ -537,6 +537,38 @@ mod tests {
         assert_eq!(commits[1].commit, "commit-1");
 
         remove_db("data/test_list_commits_multiple");
+    }
+
+    #[test]
+    fn test_get_latest_commit() {
+        let db = Database::new_rocksdb("data/test_get_latest_commit").unwrap();
+        let tx = db.transaction();
+        let params = CreateCommitParams {
+            commit: &"commit-1".to_string(),
+            server: &"github.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo".to_string(),
+        };
+        tx.create_commit_if_not_exists(1234567890, params).unwrap();
+        let params = CreateCommitParams {
+            commit: &"commit-2".to_string(),
+            server: &"github.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo".to_string(),
+        };
+        tx.create_commit_if_not_exists(1234567891, params).unwrap();
+        tx.commit().unwrap();
+
+        let commit = db
+            .get_latest_commit(GetLatestCommitParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+            })
+            .unwrap();
+        assert_eq!(commit, "commit-2");
+
+        remove_db("data/test_get_latest_commit");
     }
 
     #[test]
