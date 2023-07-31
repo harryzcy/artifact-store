@@ -535,7 +535,7 @@ mod tests {
 
     #[test]
     fn test_list_repos_multiple() {
-        let db = Database::new_rocksdb("data/test_list_repos").unwrap();
+        let db = Database::new_rocksdb("data/test_list_repos_multiple").unwrap();
         let tx = db.transaction();
         let time = 1234567890;
         let params = CreateRepositoryParams {
@@ -567,7 +567,7 @@ mod tests {
         assert_eq!(repos[2].server, "gitlab.com");
         assert_eq!(repos[2].repo, "repo-2");
 
-        remove_db("data/test_list_repos");
+        remove_db("data/test_list_repos_multiple");
     }
 
     #[test]
