@@ -1,6 +1,7 @@
 use std::{
     fs,
     io::Write,
+    path::Path,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -113,7 +114,6 @@ pub async fn store_file(
         "{}/{}/{}/{}/{}",
         data_dir, params.server, params.owner, params.repo, params.commit
     );
-    let path = format!("{}/{}", dir, params.path);
 
     let txn = db.transaction();
 
@@ -144,7 +144,8 @@ pub async fn store_file(
         },
     )?;
 
-    fs::create_dir_all(dir)?;
+    let path = Path::new(&dir).join(&params.path);
+    fs::create_dir_all(path.parent().unwrap())?;
     let mut file = fs::File::create(path)?;
 
     while let Some(chunk) = stream.next().await {
