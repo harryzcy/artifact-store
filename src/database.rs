@@ -512,6 +512,65 @@ mod tests {
     }
 
     #[test]
+    fn test_list_repos() {
+        let db = Database::new_rocksdb("data/test_list_repos").unwrap();
+        let tx = db.transaction();
+        let time = 1234567890;
+        let params = CreateRepositoryParams {
+            server: &"github.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo".to_string(),
+        };
+        tx.create_repo_if_not_exists(time, params).unwrap();
+        tx.commit().unwrap();
+
+        let repos = db.list_repos().unwrap();
+        assert_eq!(repos.len(), 1);
+        assert_eq!(repos[0].server, "github.com");
+        assert_eq!(repos[0].owner, "owner");
+        assert_eq!(repos[0].repo, "repo");
+
+        remove_db("data/test_list_repos");
+    }
+
+    #[test]
+    fn test_list_repos_multiple() {
+        let db = Database::new_rocksdb("data/test_list_repos").unwrap();
+        let tx = db.transaction();
+        let time = 1234567890;
+        let params = CreateRepositoryParams {
+            server: &"github.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo".to_string(),
+        };
+        tx.create_repo_if_not_exists(time, params).unwrap();
+        let params = CreateRepositoryParams {
+            server: &"gitlab.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo".to_string(),
+        };
+        tx.create_repo_if_not_exists(time, params).unwrap();
+        let params = CreateRepositoryParams {
+            server: &"gitlab.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo-2".to_string(),
+        };
+        tx.create_repo_if_not_exists(time, params).unwrap();
+        tx.commit().unwrap();
+
+        let repos = db.list_repos().unwrap();
+        assert_eq!(repos.len(), 3);
+        assert_eq!(repos[0].server, "github.com");
+        assert_eq!(repos[0].repo, "repo");
+        assert_eq!(repos[1].server, "gitlab.com");
+        assert_eq!(repos[1].repo, "repo");
+        assert_eq!(repos[2].server, "gitlab.com");
+        assert_eq!(repos[2].repo, "repo-2");
+
+        remove_db("data/test_list_repos");
+    }
+
+    #[test]
     fn test_list_commits() {
         let db = Database::new_rocksdb("data/test_list_commits").unwrap();
         let tx = db.transaction();
