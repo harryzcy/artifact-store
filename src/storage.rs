@@ -68,13 +68,12 @@ pub async fn list_artifacts(
     params: GetArtifactsParams,
 ) -> Result<GetArtifactsResponse, HandleRequestError> {
     let is_latest = params.commit == "@latest";
-    let commit: String;
-    if is_latest {
-        commit = db.get_latest_commit(database::GetLatestCommitParams {
+    let commit = if is_latest {
+        db.get_latest_commit(database::GetLatestCommitParams {
             server: &params.server,
             owner: &params.owner,
             repo: &params.repo,
-        })?;
+        })?
     } else {
         let exists = db.exists_commit(database::ExistsCommitParams {
             server: &params.server,
@@ -88,8 +87,8 @@ pub async fn list_artifacts(
                 params.commit
             )));
         }
-        commit = params.commit.clone();
-    }
+        params.commit
+    };
 
     let artifacts = db.list_artifacts(database::GetArtifactsParams {
         server: &params.server,
