@@ -26,6 +26,13 @@ pub struct CommitData {
 }
 
 #[derive(Clone)]
+pub struct GetLatestCommitParams<'a> {
+    pub server: &'a String,
+    pub owner: &'a String,
+    pub repo: &'a String,
+}
+
+#[derive(Clone)]
 pub struct ExistsArtifactParams<'a> {
     pub server: &'a String,
     pub owner: &'a String,
@@ -151,6 +158,30 @@ impl Database {
             },
             Some(true),
         )
+    }
+
+    pub fn get_latest_commit(&self, params: GetLatestCommitParams) -> Result<String, Error> {
+        let mut search_key = serialize_key(vec![
+            "commit_time".as_bytes(),
+            params.server.as_bytes(),
+            params.owner.as_bytes(),
+            params.repo.as_bytes(),
+        ]);
+        search_key.push(b'$');
+
+        match self {
+            Database::RocksDB(db) => {
+                let mut iter = db.raw_iterator();
+                iter.seek_for_prev(&search_key);
+                if iter.valid() {
+                    let key = iter.key().unwrap();
+                    let key_parts = deserialize_key(key);
+                    let commit = String::from_utf8(key_parts[4].to_vec()).unwrap();
+                    return Ok(commit);
+                }
+                Err(Error::Generic("no commits found".to_string()))
+            }
+        }
     }
 
     pub fn exists_artifact(&self, params: ExistsArtifactParams) -> Result<bool, Error> {

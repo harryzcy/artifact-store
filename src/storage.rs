@@ -67,31 +67,44 @@ pub async fn list_artifacts(
     db: &database::Database,
     params: GetArtifactsParams,
 ) -> Result<GetArtifactsResponse, HandleRequestError> {
-    let exists = db.exists_commit(database::ExistsCommitParams {
-        server: &params.server,
-        owner: &params.owner,
-        repo: &params.repo,
-        commit: &params.commit,
-    })?;
-    if !exists {
-        return Err(HandleRequestError::NotFound(format!(
-            "commit {} not found",
-            params.commit
-        )));
+    let is_latest = params.commit == "@latest";
+    let commit: String;
+    if is_latest {
+        commit = db.get_latest_commit(database::GetLatestCommitParams {
+            server: &params.server,
+            owner: &params.owner,
+            repo: &params.repo,
+        })?;
+    } else {
+        let exists = db.exists_commit(database::ExistsCommitParams {
+            server: &params.server,
+            owner: &params.owner,
+            repo: &params.repo,
+            commit: &params.commit,
+        })?;
+        if !exists {
+            return Err(HandleRequestError::NotFound(format!(
+                "commit {} not found",
+                params.commit
+            )));
+        }
+        commit = params.commit.clone();
     }
+
+    if !is_latest {}
 
     let artifacts = db.list_artifacts(database::GetArtifactsParams {
         server: &params.server,
         owner: &params.owner,
         repo: &params.repo,
-        commit: &params.commit,
+        commit: &commit,
     })?;
 
     Ok(GetArtifactsResponse {
         server: params.server,
         owner: params.owner,
         repo: params.repo,
-        commit: params.commit,
+        commit,
         artifacts,
     })
 }
