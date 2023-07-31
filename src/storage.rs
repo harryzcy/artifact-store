@@ -33,7 +33,7 @@ pub async fn list_commits(
     db: &database::Database,
     params: GetCommitsParams,
 ) -> Result<GetCommitsResponse, HandleRequestError> {
-    let commits = db.list_repo_commits(database::GetRepoCommitsParams {
+    let commits = db.list_repo_commits(database::ListRepoCommitsParams {
         server: &params.server,
         owner: &params.owner,
         repo: &params.repo,
@@ -78,7 +78,7 @@ pub async fn list_artifacts(
         },
     )?;
 
-    let artifacts = db.list_artifacts(database::GetArtifactsParams {
+    let artifacts = db.list_artifacts(database::ListArtifactsParams {
         server: &params.server,
         owner: &params.owner,
         repo: &params.repo,

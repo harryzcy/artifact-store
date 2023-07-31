@@ -3,6 +3,14 @@ use time::OffsetDateTime;
 
 type TransactionDB = rocksdb::OptimisticTransactionDB;
 
+#[derive(Clone, Serialize)]
+pub struct RepoData {
+    pub server: String,
+    pub owner: String,
+    pub repo: String,
+    pub time_added: OffsetDateTime,
+}
+
 #[derive(Clone)]
 pub struct ExistsCommitParams<'a> {
     pub server: &'a String,
@@ -12,7 +20,7 @@ pub struct ExistsCommitParams<'a> {
 }
 
 #[derive(Clone)]
-pub struct GetRepoCommitsParams<'a> {
+pub struct ListRepoCommitsParams<'a> {
     pub server: &'a String,
     pub owner: &'a String,
     pub repo: &'a String,
@@ -42,7 +50,7 @@ pub struct ExistsArtifactParams<'a> {
 }
 
 #[derive(Clone)]
-pub struct GetArtifactsParams<'a> {
+pub struct ListArtifactsParams<'a> {
     pub server: &'a String,
     pub owner: &'a String,
     pub repo: &'a String,
@@ -114,6 +122,31 @@ impl Database {
         }
     }
 
+    pub fn list_repos(&self) -> Result<Vec<RepoData>, Error> {
+        let key_prefix = serialize_key(vec!["repo".as_bytes()]);
+        self.get_by_prefix(
+            key_prefix,
+            |key, value| {
+                // parts: ["repo", server, owner, repo]
+                let key_parts = deserialize_key(key);
+                // let server = std::str::from_utf8(&key_parts[1]).unwrap();
+                let server = std::str::from_utf8(&key_parts[1]).unwrap();
+                let owner = std::str::from_utf8(&key_parts[2]).unwrap();
+                let repo = std::str::from_utf8(&key_parts[3]).unwrap();
+                let value = serde_json::from_slice::<RepoValue>(value).unwrap();
+                let time_seconds = (value.time_added / 1000) as i64;
+                let time_added = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
+                Ok(RepoData {
+                    server: server.to_string(),
+                    owner: owner.to_string(),
+                    repo: repo.to_string(),
+                    time_added,
+                })
+            },
+            None,
+        )
+    }
+
     pub fn exists_commit(&self, params: ExistsCommitParams) -> Result<bool, Error> {
         let commit_key = serialize_key(vec![
             "commit".as_bytes(),
@@ -130,7 +163,7 @@ impl Database {
 
     pub fn list_repo_commits(
         &self,
-        params: GetRepoCommitsParams,
+        params: ListRepoCommitsParams,
     ) -> Result<Vec<CommitData>, Error> {
         let key_prefix = serialize_key(vec![
             "commit_time".as_bytes(),
@@ -206,7 +239,7 @@ impl Database {
         Ok(exists)
     }
 
-    pub fn list_artifacts(&self, params: GetArtifactsParams) -> Result<Vec<ArtifactData>, Error> {
+    pub fn list_artifacts(&self, params: ListArtifactsParams) -> Result<Vec<ArtifactData>, Error> {
         let key_prefix = serialize_key(vec!["artifact".as_bytes(), params.commit.as_bytes()]);
 
         self.get_by_prefix(
@@ -493,7 +526,7 @@ mod tests {
         tx.commit().unwrap();
 
         let commits = db
-            .list_repo_commits(GetRepoCommitsParams {
+            .list_repo_commits(ListRepoCommitsParams {
                 server: &"github.com".to_string(),
                 owner: &"owner".to_string(),
                 repo: &"repo".to_string(),
@@ -526,7 +559,7 @@ mod tests {
         tx.commit().unwrap();
 
         let commits = db
-            .list_repo_commits(GetRepoCommitsParams {
+            .list_repo_commits(ListRepoCommitsParams {
                 server: &"github.com".to_string(),
                 owner: &"owner".to_string(),
                 repo: &"repo".to_string(),
@@ -584,7 +617,7 @@ mod tests {
         tx.commit().unwrap();
 
         let artifacts = db
-            .list_artifacts(GetArtifactsParams {
+            .list_artifacts(ListArtifactsParams {
                 server: &"github.com".to_string(),
                 owner: &"owner".to_string(),
                 repo: &"repo".to_string(),
@@ -621,7 +654,7 @@ mod tests {
         tx.commit().unwrap();
 
         let artifacts_commit_1 = db
-            .list_artifacts(GetArtifactsParams {
+            .list_artifacts(ListArtifactsParams {
                 server: &"github.com".to_string(),
                 owner: &"owner".to_string(),
                 repo: &"repo".to_string(),
@@ -633,7 +666,7 @@ mod tests {
         assert_eq!(artifacts_commit_1[1].path, "path/to/artifact-2");
 
         let artifacts_commit_2 = db
-            .list_artifacts(GetArtifactsParams {
+            .list_artifacts(ListArtifactsParams {
                 server: &"github.com".to_string(),
                 owner: &"owner".to_string(),
                 repo: &"repo".to_string(),
