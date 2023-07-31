@@ -26,6 +26,13 @@ pub struct CommitData {
 }
 
 #[derive(Clone)]
+pub struct GetLatestCommitParams<'a> {
+    pub server: &'a String,
+    pub owner: &'a String,
+    pub repo: &'a String,
+}
+
+#[derive(Clone)]
 pub struct ExistsArtifactParams<'a> {
     pub server: &'a String,
     pub owner: &'a String,
@@ -151,6 +158,30 @@ impl Database {
             },
             Some(true),
         )
+    }
+
+    pub fn get_latest_commit(&self, params: GetLatestCommitParams) -> Result<String, Error> {
+        let mut search_key = serialize_key(vec![
+            "commit_time".as_bytes(),
+            params.server.as_bytes(),
+            params.owner.as_bytes(),
+            params.repo.as_bytes(),
+        ]);
+        search_key.push(b'$');
+
+        match self {
+            Database::RocksDB(db) => {
+                let mut iter = db.raw_iterator();
+                iter.seek_for_prev(&search_key);
+                if iter.valid() {
+                    let value_raw = iter.value().unwrap();
+                    let value_str = std::str::from_utf8(value_raw).unwrap();
+                    let value = serde_json::from_str::<CommitTimeValue>(value_str).unwrap();
+                    return Ok(value.commit);
+                }
+                Err(Error::Generic("no commits found".to_string()))
+            }
+        }
     }
 
     pub fn exists_artifact(&self, params: ExistsArtifactParams) -> Result<bool, Error> {
@@ -506,6 +537,38 @@ mod tests {
         assert_eq!(commits[1].commit, "commit-1");
 
         remove_db("data/test_list_commits_multiple");
+    }
+
+    #[test]
+    fn test_get_latest_commit() {
+        let db = Database::new_rocksdb("data/test_get_latest_commit").unwrap();
+        let tx = db.transaction();
+        let params = CreateCommitParams {
+            commit: &"commit-1".to_string(),
+            server: &"github.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo".to_string(),
+        };
+        tx.create_commit_if_not_exists(1234567890, params).unwrap();
+        let params = CreateCommitParams {
+            commit: &"commit-2".to_string(),
+            server: &"github.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo".to_string(),
+        };
+        tx.create_commit_if_not_exists(1234567891, params).unwrap();
+        tx.commit().unwrap();
+
+        let commit = db
+            .get_latest_commit(GetLatestCommitParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+            })
+            .unwrap();
+        assert_eq!(commit, "commit-2");
+
+        remove_db("data/test_get_latest_commit");
     }
 
     #[test]

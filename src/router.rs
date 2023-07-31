@@ -126,7 +126,7 @@ async fn download_handler(
         Ok(result) => result,
         Err(e) => match e {
             HandleRequestError::NotFound(message) => {
-                return Err((StatusCode::NOT_FOUND, format!("{}", message)))
+                return Err((StatusCode::NOT_FOUND, message.to_string()))
             }
             _ => return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e))),
         },
