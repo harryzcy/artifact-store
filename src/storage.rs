@@ -14,15 +14,25 @@ use tokio_util::io::ReaderStream;
 use crate::database;
 use crate::error::HandleRequestError;
 
+#[derive(Serialize)]
+pub struct ListReposResponse {
+    pub repos: Vec<database::RepoData>,
+}
+
+pub async fn list_repos(db: &database::Database) -> Result<ListReposResponse, HandleRequestError> {
+    let repos = db.list_repos()?;
+    Ok(ListReposResponse { repos })
+}
+
 #[derive(Deserialize)]
-pub struct GetCommitsParams {
+pub struct ListCommitsParams {
     server: String,
     owner: String,
     repo: String,
 }
 
 #[derive(Serialize)]
-pub struct GetCommitsResponse {
+pub struct ListCommitsResponse {
     pub server: String,
     pub owner: String,
     pub repo: String,
@@ -31,15 +41,15 @@ pub struct GetCommitsResponse {
 
 pub async fn list_commits(
     db: &database::Database,
-    params: GetCommitsParams,
-) -> Result<GetCommitsResponse, HandleRequestError> {
+    params: ListCommitsParams,
+) -> Result<ListCommitsResponse, HandleRequestError> {
     let commits = db.list_repo_commits(database::ListRepoCommitsParams {
         server: &params.server,
         owner: &params.owner,
         repo: &params.repo,
     })?;
 
-    Ok(GetCommitsResponse {
+    Ok(ListCommitsResponse {
         server: params.server,
         owner: params.owner,
         repo: params.repo,
@@ -48,7 +58,7 @@ pub async fn list_commits(
 }
 
 #[derive(Deserialize)]
-pub struct GetArtifactsParams {
+pub struct ListArtifactsParams {
     server: String,
     owner: String,
     repo: String,
@@ -56,7 +66,7 @@ pub struct GetArtifactsParams {
 }
 
 #[derive(Serialize)]
-pub struct GetArtifactsResponse {
+pub struct ListArtifactsResponse {
     pub server: String,
     pub owner: String,
     pub repo: String,
@@ -66,8 +76,8 @@ pub struct GetArtifactsResponse {
 
 pub async fn list_artifacts(
     db: &database::Database,
-    params: GetArtifactsParams,
-) -> Result<GetArtifactsResponse, HandleRequestError> {
+    params: ListArtifactsParams,
+) -> Result<ListArtifactsResponse, HandleRequestError> {
     let commit = get_or_verify_commit(
         db,
         GetOrVerifyCommitParams {
@@ -85,7 +95,7 @@ pub async fn list_artifacts(
         commit: &commit,
     })?;
 
-    Ok(GetArtifactsResponse {
+    Ok(ListArtifactsResponse {
         server: params.server,
         owner: params.owner,
         repo: params.repo,
