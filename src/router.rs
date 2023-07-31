@@ -26,7 +26,8 @@ pub fn router(data_dir: String, db: database::Database) -> Router {
     Router::new()
         .route("/", get(index_handler))
         .route("/ping", get(ping_handler))
-        .route("/:server/:owner/:repo", get(get_commits_handler))
+        .route("/:server/:owner/:repo", get(list_commits_handler))
+        .route("/:server/:owner/:repo/:commit", get(list_artifacts_handler))
         .route("/:server/:owner/:repo/:commit/*path", put(upload_handler))
         .route("/:server/:owner/:repo/:commit/*path", get(download_handler))
         .with_state(Arc::clone(&shared_state))
@@ -44,6 +45,50 @@ async fn ping_handler() -> &'static str {
 struct Response {
     code: u16,
     message: String,
+}
+
+async fn list_commits_handler(
+    Path(params): Path<storage::GetCommitsParams>,
+    State(state): State<SharedState>,
+) -> impl IntoResponse {
+    let db = &state.read().await.db;
+    let response = match storage::list_commits(db, params).await {
+        Ok(res) => res,
+        Err(e) => {
+            let response = Response {
+                code: 500,
+                message: format!("{}", e),
+            };
+            return serde_json::to_string(&response).unwrap();
+        }
+    };
+
+    serde_json::to_string(&response).unwrap()
+}
+
+async fn list_artifacts_handler(
+    Path(params): Path<storage::GetArtifactsParams>,
+    State(state): State<SharedState>,
+) -> impl IntoResponse {
+    let db = &state.read().await.db;
+    let response = match storage::list_artifacts(db, params).await {
+        Ok(res) => res,
+        Err(e) => match e {
+            HandleRequestError::NotFound(message) => {
+                let response = Response { code: 404, message };
+                return serde_json::to_string(&response).unwrap();
+            }
+            _ => {
+                let response = Response {
+                    code: 500,
+                    message: format!("{}", e),
+                };
+                return serde_json::to_string(&response).unwrap();
+            }
+        },
+    };
+
+    serde_json::to_string(&response).unwrap()
 }
 
 async fn upload_handler(
@@ -80,11 +125,8 @@ async fn download_handler(
     let (filename, body) = match storage::prepare_download_file(data_dir, db, params).await {
         Ok(result) => result,
         Err(e) => match e {
-            HandleRequestError::NotFound(filename) => {
-                return Err((
-                    StatusCode::NOT_FOUND,
-                    format!("File not found: {}", filename),
-                ))
+            HandleRequestError::NotFound(message) => {
+                return Err((StatusCode::NOT_FOUND, format!("{}", message)))
             }
             _ => return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e))),
         },
@@ -98,24 +140,6 @@ async fn download_handler(
     Ok((headers, body))
 }
 
-async fn get_commits_handler(
-    Path(params): Path<storage::GetCommitsParams>,
-    State(state): State<SharedState>,
-) -> impl IntoResponse {
-    let db = &state.read().await.db;
-    let response = match storage::get_commits(db, params).await {
-        Ok(res) => res,
-        Err(e) => {
-            let response = Response {
-                code: 500,
-                message: format!("{}", e),
-            };
-            return serde_json::to_string(&response).unwrap();
-        }
-    };
-
-    serde_json::to_string(&response).unwrap()
-}
 #[cfg(test)]
 mod tests {
     use super::*;

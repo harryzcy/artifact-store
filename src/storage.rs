@@ -28,23 +28,72 @@ pub struct GetCommitsResponse {
     pub commits: Vec<database::CommitData>,
 }
 
-pub async fn get_commits(
+pub async fn list_commits(
     db: &database::Database,
     params: GetCommitsParams,
 ) -> Result<GetCommitsResponse, HandleRequestError> {
-    let commits = db.get_repo_commits(database::GetRepoCommitsParams {
+    let commits = db.list_repo_commits(database::GetRepoCommitsParams {
         server: &params.server,
         owner: &params.owner,
         repo: &params.repo,
     })?;
 
-    let response = GetCommitsResponse {
+    Ok(GetCommitsResponse {
         server: params.server,
         owner: params.owner,
         repo: params.repo,
         commits,
-    };
-    Ok(response)
+    })
+}
+
+#[derive(Deserialize)]
+pub struct GetArtifactsParams {
+    server: String,
+    owner: String,
+    repo: String,
+    commit: String,
+}
+
+#[derive(Serialize)]
+pub struct GetArtifactsResponse {
+    pub server: String,
+    pub owner: String,
+    pub repo: String,
+    pub commit: String,
+    pub artifacts: Vec<database::ArtifactData>,
+}
+
+pub async fn list_artifacts(
+    db: &database::Database,
+    params: GetArtifactsParams,
+) -> Result<GetArtifactsResponse, HandleRequestError> {
+    let exists = db.exists_commit(database::ExistsCommitParams {
+        server: &params.server,
+        owner: &params.owner,
+        repo: &params.repo,
+        commit: &params.commit,
+    })?;
+    if !exists {
+        return Err(HandleRequestError::NotFound(format!(
+            "commit {} not found",
+            params.commit
+        )));
+    }
+
+    let artifacts = db.list_artifacts(database::GetArtifactsParams {
+        server: &params.server,
+        owner: &params.owner,
+        repo: &params.repo,
+        commit: &params.commit,
+    })?;
+
+    Ok(GetArtifactsResponse {
+        server: params.server,
+        owner: params.owner,
+        repo: params.repo,
+        commit: params.commit,
+        artifacts,
+    })
 }
 
 #[derive(Deserialize)]
@@ -134,7 +183,10 @@ pub async fn prepare_download_file(
         path: &params.path,
     })?;
     if !exists {
-        return Err(HandleRequestError::NotFound(params.path));
+        return Err(HandleRequestError::NotFound(format!(
+            "file {} not found",
+            params.path
+        )));
     }
 
     let path = format!(
@@ -143,7 +195,12 @@ pub async fn prepare_download_file(
     );
     let file = match File::open(path).await {
         Ok(file) => file,
-        Err(_) => return Err(HandleRequestError::NotFound(params.path)),
+        Err(_) => {
+            return Err(HandleRequestError::NotFound(format!(
+                "file {} not found",
+                params.path
+            )))
+        }
     };
     let stream: ReaderStream<File> = ReaderStream::new(file);
     let body = StreamBody::new(stream);

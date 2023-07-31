@@ -4,6 +4,14 @@ use time::OffsetDateTime;
 type TransactionDB = rocksdb::OptimisticTransactionDB;
 
 #[derive(Clone)]
+pub struct ExistsCommitParams<'a> {
+    pub server: &'a String,
+    pub owner: &'a String,
+    pub repo: &'a String,
+    pub commit: &'a String,
+}
+
+#[derive(Clone)]
 pub struct GetRepoCommitsParams<'a> {
     pub server: &'a String,
     pub owner: &'a String,
@@ -24,6 +32,21 @@ pub struct ExistsArtifactParams<'a> {
     pub repo: &'a String,
     pub commit: &'a String,
     pub path: &'a String,
+}
+
+#[derive(Clone)]
+pub struct GetArtifactsParams<'a> {
+    pub server: &'a String,
+    pub owner: &'a String,
+    pub repo: &'a String,
+    pub commit: &'a String,
+}
+
+#[derive(Clone, Serialize)]
+pub struct ArtifactData {
+    pub path: String,
+    #[serde(with = "time::serde::rfc3339")]
+    pub time: OffsetDateTime,
 }
 
 #[derive(Clone)]
@@ -84,52 +107,7 @@ impl Database {
         }
     }
 
-    pub fn get_repo_commits(&self, params: GetRepoCommitsParams) -> Result<Vec<CommitData>, Error> {
-        let key_prefix = serialize_key(vec![
-            "commit_time".as_bytes(),
-            params.server.as_bytes(),
-            params.owner.as_bytes(),
-            params.repo.as_bytes(),
-        ]);
-        let mut key_start = key_prefix.clone();
-        key_start.push(b'#');
-
-        let mut key_end = key_prefix.clone();
-        key_end.push(b'$');
-
-        let mut commits = Vec::new();
-        match self {
-            Database::RocksDB(db) => {
-                let mut iter = db.raw_iterator();
-                iter.seek_for_prev(key_end);
-                while iter.valid()
-                    && iter.key().unwrap() > <Vec<u8> as AsRef<[u8]>>::as_ref(&key_start)
-                {
-                    let raw_key = iter.key().unwrap();
-                    let raw_value = iter.value().unwrap();
-
-                    // parts: ["commit_time", server, owner, repo, time]
-                    let key_parts = deserialize_key(raw_key);
-                    let time_part = key_parts.last().unwrap();
-                    let time_millisecond =
-                        u128::from_be_bytes(time_part[0..16].try_into().unwrap());
-                    let time_seconds = (time_millisecond / 1000) as i64;
-                    let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
-
-                    let value_str = std::str::from_utf8(raw_value).unwrap();
-                    let value = serde_json::from_str::<CommitTimeValue>(value_str).unwrap();
-                    commits.push(CommitData {
-                        commit: value.commit,
-                        time,
-                    });
-                    iter.prev();
-                }
-                Ok(commits)
-            }
-        }
-    }
-
-    pub fn exists_artifact(&self, params: ExistsArtifactParams) -> Result<bool, Error> {
+    pub fn exists_commit(&self, params: ExistsCommitParams) -> Result<bool, Error> {
         let commit_key = serialize_key(vec![
             "commit".as_bytes(),
             params.server.as_bytes(),
@@ -140,6 +118,48 @@ impl Database {
         let exists = match self {
             Database::RocksDB(db) => db.get(commit_key)?.is_some(),
         };
+        Ok(exists)
+    }
+
+    pub fn list_repo_commits(
+        &self,
+        params: GetRepoCommitsParams,
+    ) -> Result<Vec<CommitData>, Error> {
+        let key_prefix = serialize_key(vec![
+            "commit_time".as_bytes(),
+            params.server.as_bytes(),
+            params.owner.as_bytes(),
+            params.repo.as_bytes(),
+        ]);
+
+        self.get_by_prefix(
+            key_prefix,
+            |key, value| {
+                // parts: ["commit_time", server, owner, repo, time]
+                let key_parts = deserialize_key(key);
+                let time_part = key_parts.last().unwrap();
+                let time_millisecond = u128::from_be_bytes(time_part[0..16].try_into().unwrap());
+                let time_seconds = (time_millisecond / 1000) as i64;
+                let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
+
+                let value_str = std::str::from_utf8(value).unwrap();
+                let value = serde_json::from_str::<CommitTimeValue>(value_str).unwrap();
+                Ok(CommitData {
+                    commit: value.commit,
+                    time,
+                })
+            },
+            Some(true),
+        )
+    }
+
+    pub fn exists_artifact(&self, params: ExistsArtifactParams) -> Result<bool, Error> {
+        let exists = self.exists_commit(ExistsCommitParams {
+            server: params.server,
+            owner: params.owner,
+            repo: params.repo,
+            commit: params.commit,
+        })?;
         if !exists {
             return Ok(false);
         }
@@ -153,6 +173,69 @@ impl Database {
             Database::RocksDB(db) => db.get(artifact_key)?.is_some(),
         };
         Ok(exists)
+    }
+
+    pub fn list_artifacts(&self, params: GetArtifactsParams) -> Result<Vec<ArtifactData>, Error> {
+        let key_prefix = serialize_key(vec!["artifact".as_bytes(), params.commit.as_bytes()]);
+
+        self.get_by_prefix(
+            key_prefix,
+            |key, value| {
+                // parts: ["artifact", commit, path]
+                let key_parts = deserialize_key(key);
+                let path_raw = key_parts.last().unwrap();
+                let path = std::str::from_utf8(path_raw).unwrap().to_string();
+
+                let value_str = std::str::from_utf8(value).unwrap();
+                let value = serde_json::from_str::<ArtifactValue>(value_str).unwrap();
+                let time_seconds = (value.time_added / 1000) as i64;
+                let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
+
+                Ok(ArtifactData { path, time })
+            },
+            None,
+        )
+    }
+
+    fn get_by_prefix<T>(
+        &self,
+        key_prefix: Vec<u8>,
+        func: fn(key: &[u8], value: &[u8]) -> Result<T, Error>,
+        reverse: Option<bool>,
+    ) -> Result<Vec<T>, Error> {
+        let mut key_start = key_prefix.clone();
+        key_start.push(b'#');
+
+        let mut key_end = key_prefix.clone();
+        key_end.push(b'$');
+
+        let mut result: Vec<T> = Vec::new();
+        match self {
+            Database::RocksDB(db) => {
+                let mut iter = db.raw_iterator();
+                let should_reverse = reverse.unwrap_or(false);
+                if should_reverse {
+                    iter.seek_for_prev(&key_end);
+                } else {
+                    iter.seek(&key_start);
+                }
+                while iter.valid() {
+                    let raw_key = iter.key().unwrap();
+                    if !raw_key.starts_with(&key_prefix) {
+                        break;
+                    }
+                    let raw_value = iter.value().unwrap();
+                    let value = func(raw_key, raw_value)?;
+                    result.push(value);
+                    if should_reverse {
+                        iter.prev();
+                    } else {
+                        iter.next();
+                    }
+                }
+                Ok(result)
+            }
+        }
     }
 }
 
@@ -365,8 +448,8 @@ mod tests {
     }
 
     #[test]
-    fn test_get_commits() {
-        let db = Database::new_rocksdb("data/test_get_commits").unwrap();
+    fn test_list_commits() {
+        let db = Database::new_rocksdb("data/test_list_commits").unwrap();
         let tx = db.transaction();
         let time = 1234567890;
         let params = CreateCommitParams {
@@ -379,7 +462,7 @@ mod tests {
         tx.commit().unwrap();
 
         let commits = db
-            .get_repo_commits(GetRepoCommitsParams {
+            .list_repo_commits(GetRepoCommitsParams {
                 server: &"github.com".to_string(),
                 owner: &"owner".to_string(),
                 repo: &"repo".to_string(),
@@ -388,12 +471,12 @@ mod tests {
         assert_eq!(commits.len(), 1);
         assert_eq!(commits[0].commit, "1234567890abcdef");
 
-        remove_db("data/test_get_commits");
+        remove_db("data/test_list_commits");
     }
 
     #[test]
-    fn test_get_commits_order() {
-        let db = Database::new_rocksdb("data/test_get_commits_multiple").unwrap();
+    fn test_list_commits_order() {
+        let db = Database::new_rocksdb("data/test_list_commits_multiple").unwrap();
         let tx = db.transaction();
         let params = CreateCommitParams {
             commit: &"commit-1".to_string(),
@@ -412,7 +495,7 @@ mod tests {
         tx.commit().unwrap();
 
         let commits = db
-            .get_repo_commits(GetRepoCommitsParams {
+            .list_repo_commits(GetRepoCommitsParams {
                 server: &"github.com".to_string(),
                 owner: &"owner".to_string(),
                 repo: &"repo".to_string(),
@@ -422,7 +505,82 @@ mod tests {
         assert_eq!(commits[0].commit, "commit-2");
         assert_eq!(commits[1].commit, "commit-1");
 
-        remove_db("data/test_get_commits_multiple");
+        remove_db("data/test_list_commits_multiple");
+    }
+
+    #[test]
+    fn test_list_artifacts() {
+        let db = Database::new_rocksdb("data/test_list_artifacts").unwrap();
+        let tx = db.transaction();
+        let time_milliseconds = 1234567890 * 1000;
+        let params = CreateArtifactParams {
+            commit: &"1234567890abcdef".to_string(),
+            path: &"path/to/artifact".to_string(),
+        };
+        tx.create_artifact(time_milliseconds, params).unwrap();
+        tx.commit().unwrap();
+
+        let artifacts = db
+            .list_artifacts(GetArtifactsParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+                commit: &"1234567890abcdef".to_string(),
+            })
+            .unwrap();
+        assert_eq!(artifacts.len(), 1);
+        assert_eq!(artifacts[0].path, "path/to/artifact");
+        assert_eq!(artifacts[0].time.unix_timestamp(), 1234567890);
+
+        remove_db("data/test_list_artifacts");
+    }
+
+    #[test]
+    fn test_list_artifacts_multiple() {
+        let db = Database::new_rocksdb("data/test_list_artifacts_multiple").unwrap();
+        let tx = db.transaction();
+        let time_milliseconds = 1234567890 * 1000;
+        let params1 = CreateArtifactParams {
+            commit: &"commit-1".to_string(),
+            path: &"path/to/artifact-1".to_string(),
+        };
+        tx.create_artifact(time_milliseconds, params1).unwrap();
+        let params2 = CreateArtifactParams {
+            commit: &"commit-1".to_string(),
+            path: &"path/to/artifact-2".to_string(),
+        };
+        tx.create_artifact(time_milliseconds, params2).unwrap();
+        let params3 = CreateArtifactParams {
+            commit: &"commit-2".to_string(),
+            path: &"path/to/artifact-3".to_string(),
+        };
+        tx.create_artifact(time_milliseconds, params3).unwrap();
+        tx.commit().unwrap();
+
+        let artifacts_commit_1 = db
+            .list_artifacts(GetArtifactsParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+                commit: &"commit-1".to_string(),
+            })
+            .unwrap();
+        assert_eq!(artifacts_commit_1.len(), 2);
+        assert_eq!(artifacts_commit_1[0].path, "path/to/artifact-1");
+        assert_eq!(artifacts_commit_1[1].path, "path/to/artifact-2");
+
+        let artifacts_commit_2 = db
+            .list_artifacts(GetArtifactsParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+                commit: &"commit-2".to_string(),
+            })
+            .unwrap();
+        assert_eq!(artifacts_commit_2.len(), 1);
+        assert_eq!(artifacts_commit_2[0].path, "path/to/artifact-3");
+
+        remove_db("data/test_list_artifacts_multiple");
     }
 
     #[test]
