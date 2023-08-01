@@ -26,6 +26,7 @@ pub fn router(data_dir: String, db: database::Database) -> Router {
     Router::new()
         .route("/", get(index_handler))
         .route("/ping", get(ping_handler))
+        .route("/repositories", get(list_repos_handler))
         .route("/:server/:owner/:repo", get(list_commits_handler))
         .route("/:server/:owner/:repo/:commit", get(list_artifacts_handler))
         .route("/:server/:owner/:repo/:commit/*path", put(upload_handler))
@@ -47,8 +48,24 @@ struct Response {
     message: String,
 }
 
+async fn list_repos_handler(State(state): State<SharedState>) -> impl IntoResponse {
+    let db = &state.read().await.db;
+    let response = match storage::list_repos(db).await {
+        Ok(res) => res,
+        Err(e) => {
+            let response = Response {
+                code: 500,
+                message: format!("{}", e),
+            };
+            return serde_json::to_string(&response).unwrap();
+        }
+    };
+
+    serde_json::to_string(&response).unwrap()
+}
+
 async fn list_commits_handler(
-    Path(params): Path<storage::GetCommitsParams>,
+    Path(params): Path<storage::ListCommitsParams>,
     State(state): State<SharedState>,
 ) -> impl IntoResponse {
     let db = &state.read().await.db;
@@ -67,7 +84,7 @@ async fn list_commits_handler(
 }
 
 async fn list_artifacts_handler(
-    Path(params): Path<storage::GetArtifactsParams>,
+    Path(params): Path<storage::ListArtifactsParams>,
     State(state): State<SharedState>,
 ) -> impl IntoResponse {
     let db = &state.read().await.db;
