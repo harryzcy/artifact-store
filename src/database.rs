@@ -32,7 +32,7 @@ pub struct ListRepoCommitsParams<'a> {
 pub struct CommitData {
     pub commit: String,
     #[serde(with = "time::serde::rfc3339")]
-    pub time: OffsetDateTime,
+    pub time_added: OffsetDateTime,
 }
 
 #[derive(Clone)]
@@ -64,7 +64,7 @@ pub struct ListArtifactsParams<'a> {
 pub struct ArtifactData {
     pub path: String,
     #[serde(with = "time::serde::rfc3339")]
-    pub time: OffsetDateTime,
+    pub time_added: OffsetDateTime,
 }
 
 #[derive(Clone)]
@@ -189,7 +189,7 @@ impl Database {
                 let value = serde_json::from_str::<CommitTimeValue>(value_str).unwrap();
                 Ok(CommitData {
                     commit: value.commit,
-                    time,
+                    time_added: time,
                 })
             },
             Some(true),
@@ -258,7 +258,10 @@ impl Database {
                 let time_seconds = (value.time_added / 1000) as i64;
                 let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
 
-                Ok(ArtifactData { path, time })
+                Ok(ArtifactData {
+                    path,
+                    time_added: time,
+                })
             },
             None,
         )
@@ -688,7 +691,7 @@ mod tests {
             .unwrap();
         assert_eq!(artifacts.len(), 1);
         assert_eq!(artifacts[0].path, "path/to/artifact");
-        assert_eq!(artifacts[0].time.unix_timestamp(), 1234567890);
+        assert_eq!(artifacts[0].time_added.unix_timestamp(), 1234567890);
 
         remove_db("data/test_list_artifacts");
     }
