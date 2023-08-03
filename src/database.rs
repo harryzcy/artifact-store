@@ -4,6 +4,7 @@ use time::OffsetDateTime;
 type TransactionDB = rocksdb::OptimisticTransactionDB;
 
 #[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RepoData {
     pub server: String,
     pub owner: String,
@@ -27,6 +28,7 @@ pub struct ListRepoCommitsParams<'a> {
 }
 
 #[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CommitData {
     pub commit: String,
     #[serde(with = "time::serde::rfc3339")]
@@ -58,6 +60,7 @@ pub struct ListArtifactsParams<'a> {
 }
 
 #[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ArtifactData {
     pub path: String,
     #[serde(with = "time::serde::rfc3339")]
