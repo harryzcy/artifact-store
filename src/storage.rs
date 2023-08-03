@@ -15,6 +15,7 @@ use crate::database;
 use crate::error::HandleRequestError;
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ListReposResponse {
     pub repos: Vec<database::RepoData>,
 }
@@ -32,6 +33,7 @@ pub struct ListCommitsParams {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ListCommitsResponse {
     pub server: String,
     pub owner: String,
@@ -66,6 +68,7 @@ pub struct ListArtifactsParams {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ListArtifactsResponse {
     pub server: String,
     pub owner: String,
