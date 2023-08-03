@@ -6,7 +6,7 @@ edition = "2021"
 license = "MIT"
 
 [dependencies]
-axum = { version = "0.6.19", features = ["headers"] }
+axum = { version = "0.6.20", features = ["headers"] }
 futures-util = "0.3.28"
 hyper = { version = "0.14.27", features = ["full"] }
 rocksdb = { version = "0.21.0", features = ["multi-threaded-cf"] }
