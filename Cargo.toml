@@ -10,9 +10,14 @@ axum = { version = "0.6.20", features = ["headers"] }
 futures-util = "0.3.28"
 hyper = { version = "0.14.27", features = ["full"] }
 rocksdb = { version = "0.21.0", features = ["multi-threaded-cf"] }
-serde = { version = "1.0.180", features = ["derive"] }
+serde = { version = "1.0.181", features = ["derive"] }
 serde_json = "1.0.104"
 time = { version = "0.3.25", features = ["serde", "formatting"] }
 tokio = { version = "1.29.1", features = ["full"] }
 tokio-util = { version = "0.7.8", features = ["io"] }
+
+[dev-dependencies]
+bytes = "1.4.0"
+http = "0.2.9"
+http-body = "0.4.5"
 tower = "0.4.13"
