@@ -168,7 +168,7 @@ mod tests {
     #[tokio::test]
     async fn index_route() {
         let data_dir = "data".to_string();
-        let db = database::Database::new_rocksdb("data/test_index_route").unwrap();
+        let db = database::Database::new_rocksdb("data/router/test_index_route").unwrap();
         let app = router(data_dir, db);
 
         let response = app
@@ -181,13 +181,13 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         assert_eq!(&body[..], b"<h1>Artifact Store</h1>");
 
-        std::fs::remove_dir_all("data/test_index_route").unwrap();
+        std::fs::remove_dir_all("data/router/test_index_route").unwrap();
     }
 
     #[tokio::test]
     async fn ping_route() {
         let data_dir = "data".to_string();
-        let db = database::Database::new_rocksdb("data/test_ping_route").unwrap();
+        let db = database::Database::new_rocksdb("data/router/test_ping_route").unwrap();
         let app = router(data_dir, db);
 
         let response = app
@@ -200,7 +200,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         assert_eq!(&body[..], b"pong");
 
-        std::fs::remove_dir_all("data/test_ping_route").unwrap();
+        std::fs::remove_dir_all("data/router/test_ping_route").unwrap();
     }
 
     async fn send_request(
@@ -225,7 +225,7 @@ mod tests {
     #[tokio::test]
     async fn upload_download_empty() {
         let data_dir = "data".to_string();
-        let db = database::Database::new_rocksdb("data/test_upload_download_empty").unwrap();
+        let db = database::Database::new_rocksdb("data/router/test_upload_download_empty").unwrap();
         let mut app = router(data_dir, db);
 
         let response = send_request(
@@ -255,13 +255,14 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         assert!(body.is_empty());
 
-        std::fs::remove_dir_all("data/test_upload_download_empty").unwrap();
+        std::fs::remove_dir_all("data/router/test_upload_download_empty").unwrap();
     }
 
     #[tokio::test]
     async fn upload_download_binary() {
         let data_dir = "data".to_string();
-        let db = database::Database::new_rocksdb("data/test_upload_download_binary").unwrap();
+        let db =
+            database::Database::new_rocksdb("data/router/test_upload_download_binary").unwrap();
         let mut app = router(data_dir, db);
 
         let response = send_request(
@@ -292,13 +293,14 @@ mod tests {
         assert!(!body.is_empty());
         assert!(&body[..] == b"test_upload_download_binary");
 
-        std::fs::remove_dir_all("data/test_upload_download_binary").unwrap();
+        std::fs::remove_dir_all("data/router/test_upload_download_binary").unwrap();
     }
 
     #[tokio::test]
     async fn upload_download_latest() {
         let data_dir = "data".to_string();
-        let db = database::Database::new_rocksdb("data/test_upload_download_latest").unwrap();
+        let db =
+            database::Database::new_rocksdb("data/router/test_upload_download_latest").unwrap();
         let mut app = router(data_dir, db);
 
         let response = send_request(
@@ -329,13 +331,13 @@ mod tests {
         assert!(!body.is_empty());
         assert!(&body[..] == b"test_upload_download_latest");
 
-        std::fs::remove_dir_all("data/test_upload_download_latest").unwrap();
+        std::fs::remove_dir_all("data/router/test_upload_download_latest").unwrap();
     }
 
     #[tokio::test]
     async fn download_not_exist() {
         let data_dir = "data".to_string();
-        let db = database::Database::new_rocksdb("data/test_download_not_exist").unwrap();
+        let db = database::Database::new_rocksdb("data/router/test_download_not_exist").unwrap();
         let mut app = router(data_dir, db);
 
         let response = send_request(
@@ -350,13 +352,13 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         assert!(!body.is_empty());
 
-        std::fs::remove_dir_all("data/test_download_not_exist").unwrap();
+        std::fs::remove_dir_all("data/router/test_download_not_exist").unwrap();
     }
 
     #[tokio::test]
     async fn list_repo() {
         let data_dir = "data".to_string();
-        let db = database::Database::new_rocksdb("data/test_list_repo").unwrap();
+        let db = database::Database::new_rocksdb("data/router/test_list_repo").unwrap();
         let mut app = router(data_dir, db);
 
         let response = send_request(
@@ -380,13 +382,13 @@ mod tests {
         assert_eq!(value["repos"][0]["owner"], "owner");
         assert_eq!(value["repos"][0]["repo"], "repo");
 
-        std::fs::remove_dir_all("data/test_list_repo").unwrap();
+        std::fs::remove_dir_all("data/router/test_list_repo").unwrap();
     }
 
     #[tokio::test]
     async fn list_repo_multiple() {
         let data_dir = "data".to_string();
-        let db = database::Database::new_rocksdb("data/test_list_repo_multiple").unwrap();
+        let db = database::Database::new_rocksdb("data/router/test_list_repo_multiple").unwrap();
         let mut app = router(data_dir, db);
 
         let response = send_request(
@@ -415,13 +417,13 @@ mod tests {
         let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
         assert_eq!(value["repos"].as_array().unwrap().len(), 2);
 
-        std::fs::remove_dir_all("data/test_list_repo_multiple").unwrap();
+        std::fs::remove_dir_all("data/router/test_list_repo_multiple").unwrap();
     }
 
     #[tokio::test]
     async fn list_commits() {
         let data_dir = "data".to_string();
-        let db = database::Database::new_rocksdb("data/test_list_commit").unwrap();
+        let db = database::Database::new_rocksdb("data/router/test_list_commit").unwrap();
         let mut app = router(data_dir, db);
 
         let response = send_request(
@@ -452,13 +454,13 @@ mod tests {
         assert_eq!(value["commits"].as_array().unwrap().len(), 1);
         assert_eq!(value["commits"][0]["commit"], "commit");
 
-        std::fs::remove_dir_all("data/test_list_commit").unwrap();
+        std::fs::remove_dir_all("data/router/test_list_commit").unwrap();
     }
 
     #[tokio::test]
     async fn list_commits_multiple() {
         let data_dir = "data".to_string();
-        let db = database::Database::new_rocksdb("data/test_list_commit_multi").unwrap();
+        let db = database::Database::new_rocksdb("data/router/test_list_commit_multiple").unwrap();
         let mut app = router(data_dir, db);
 
         let response = send_request(
@@ -497,13 +499,13 @@ mod tests {
         assert_eq!(value["repo"], "repo");
         assert_eq!(value["commits"].as_array().unwrap().len(), 2);
 
-        std::fs::remove_dir_all("data/test_list_commit_multi").unwrap();
+        std::fs::remove_dir_all("data/router/test_list_commit_multiple").unwrap();
     }
 
     #[tokio::test]
     async fn list_artifacts() {
         let data_dir = "data".to_string();
-        let db = database::Database::new_rocksdb("data/test_list_artifacts").unwrap();
+        let db = database::Database::new_rocksdb("data/router/test_list_artifacts").unwrap();
         let mut app = router(data_dir, db);
 
         let response = send_request(
@@ -535,13 +537,13 @@ mod tests {
         assert_eq!(value["artifacts"].as_array().unwrap().len(), 1);
         assert_eq!(value["artifacts"][0]["path"], "dir/test_list_artifacts.txt");
 
-        std::fs::remove_dir_all("data/test_list_artifacts").unwrap();
+        std::fs::remove_dir_all("data/router/test_list_artifacts").unwrap();
     }
 
     #[tokio::test]
     async fn list_artifacts_multiple() {
         let data_dir = "data".to_string();
-        let db = database::Database::new_rocksdb("data/test_list_artifacts_multi").unwrap();
+        let db = database::Database::new_rocksdb("data/router/test_list_artifacts_multi").unwrap();
         let mut app = router(data_dir, db);
 
         let response = send_request(
@@ -580,6 +582,6 @@ mod tests {
         assert_eq!(value["commit"], "commit");
         assert_eq!(value["artifacts"].as_array().unwrap().len(), 2);
 
-        std::fs::remove_dir_all("data/test_list_artifacts_multi").unwrap();
+        std::fs::remove_dir_all("data/router/test_list_artifacts_multi").unwrap();
     }
 }
