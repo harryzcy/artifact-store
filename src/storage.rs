@@ -117,7 +117,7 @@ pub struct UploadParams {
 }
 
 pub async fn store_file(
-    data_dir: &String,
+    base_dir: &String,
     db: &database::Database,
     params: UploadParams,
     mut stream: BodyStream,
@@ -125,7 +125,7 @@ pub async fn store_file(
     let time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
     let dir = format!(
         "{}/{}/{}/{}/{}",
-        data_dir, params.server, params.owner, params.repo, params.commit
+        base_dir, params.server, params.owner, params.repo, params.commit
     );
 
     let txn = db.transaction();

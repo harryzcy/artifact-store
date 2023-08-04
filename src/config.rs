@@ -1,8 +1,12 @@
 use std::env::var;
 
 pub struct Config {
+    /// The base directory where all data is stored.
     pub data_dir: String,
+    /// The path to the rocksdb database, default to $data_dir/rocksdb.
     pub rocksdb_path: String,
+    /// The path to the artifacts directory, default to $data_dir/artifacts.
+    pub artifact_path: String,
 }
 
 pub fn load() -> Config {
@@ -14,10 +18,15 @@ pub fn load() -> Config {
         Ok(dir) => dir,
         Err(_) => format!("{}/rocksdb", data_dir).to_string(),
     };
+    let artifact_path = match var("ARTIFACT_PATH") {
+        Ok(dir) => dir,
+        Err(_) => format!("{}/artifacts", data_dir).to_string(),
+    };
 
     Config {
         data_dir,
         rocksdb_path,
+        artifact_path,
     }
 }
 

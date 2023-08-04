@@ -17,11 +17,16 @@ type SharedState = Arc<RwLock<RouterState>>;
 
 pub struct RouterState {
     pub data_dir: String,
+    pub artifact_path: String,
     pub db: database::Database,
 }
 
-pub fn router(data_dir: String, db: database::Database) -> Router {
-    let shared_state = SharedState::new(RwLock::new(RouterState { data_dir, db }));
+pub fn router(data_dir: String, artifact_path: String, db: database::Database) -> Router {
+    let shared_state = SharedState::new(RwLock::new(RouterState {
+        data_dir,
+        artifact_path,
+        db,
+    }));
 
     Router::new()
         .route("/", get(index_handler))
@@ -113,9 +118,9 @@ async fn upload_handler(
     State(state): State<SharedState>,
     stream: BodyStream,
 ) -> Json<SimpleResponse> {
-    let data_dir = &state.read().await.data_dir;
+    let artifact_path = &state.read().await.artifact_path;
     let db = &state.read().await.db;
-    match storage::store_file(data_dir, db, params, stream).await {
+    match storage::store_file(artifact_path, db, params, stream).await {
         Ok(_) => (),
         Err(e) => {
             let response = SimpleResponse {
@@ -137,9 +142,9 @@ async fn download_handler(
     Path(params): Path<storage::DownloadParams>,
     State(state): State<SharedState>,
 ) -> impl IntoResponse {
-    let data_dir = &state.read().await.data_dir;
+    let artifact_path = &state.read().await.artifact_path;
     let db = &state.read().await.db;
-    let (filename, body) = match storage::prepare_download_file(data_dir, db, params).await {
+    let (filename, body) = match storage::prepare_download_file(artifact_path, db, params).await {
         Ok(result) => result,
         Err(e) => match e {
             HandleRequestError::NotFound(message) => {
@@ -167,9 +172,10 @@ mod tests {
 
     #[tokio::test]
     async fn index_route() {
-        let data_dir = "data".to_string();
+        let data_dir = String::from("data");
+        let artifact_path = String::from("data/artifacts");
         let db = database::Database::new_rocksdb("data/router/test_index_route").unwrap();
-        let app = router(data_dir, db);
+        let app = router(data_dir, artifact_path, db);
 
         let response = app
             .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
@@ -186,9 +192,10 @@ mod tests {
 
     #[tokio::test]
     async fn ping_route() {
-        let data_dir = "data".to_string();
+        let data_dir = String::from("data");
+        let artifact_path = String::from("data/artifacts");
         let db = database::Database::new_rocksdb("data/router/test_ping_route").unwrap();
-        let app = router(data_dir, db);
+        let app = router(data_dir, artifact_path, db);
 
         let response = app
             .oneshot(Request::builder().uri("/ping").body(Body::empty()).unwrap())
@@ -224,9 +231,10 @@ mod tests {
 
     #[tokio::test]
     async fn upload_download_empty() {
-        let data_dir = "data".to_string();
+        let data_dir = String::from("data");
+        let artifact_path = String::from("data/artifacts");
         let db = database::Database::new_rocksdb("data/router/test_upload_download_empty").unwrap();
-        let mut app = router(data_dir, db);
+        let mut app = router(data_dir, artifact_path, db);
 
         let response = send_request(
             &mut app,
@@ -260,10 +268,11 @@ mod tests {
 
     #[tokio::test]
     async fn upload_download_binary() {
-        let data_dir = "data".to_string();
+        let data_dir = String::from("data");
+        let artifact_path = String::from("data/artifacts");
         let db =
             database::Database::new_rocksdb("data/router/test_upload_download_binary").unwrap();
-        let mut app = router(data_dir, db);
+        let mut app = router(data_dir, artifact_path, db);
 
         let response = send_request(
             &mut app,
@@ -298,10 +307,11 @@ mod tests {
 
     #[tokio::test]
     async fn upload_download_latest() {
-        let data_dir = "data".to_string();
+        let data_dir = String::from("data");
+        let artifact_path = String::from("data/artifacts");
         let db =
             database::Database::new_rocksdb("data/router/test_upload_download_latest").unwrap();
-        let mut app = router(data_dir, db);
+        let mut app = router(data_dir, artifact_path, db);
 
         let response = send_request(
             &mut app,
@@ -336,9 +346,10 @@ mod tests {
 
     #[tokio::test]
     async fn download_not_exist() {
-        let data_dir = "data".to_string();
+        let data_dir = String::from("data");
+        let artifact_path = String::from("data/artifacts");
         let db = database::Database::new_rocksdb("data/router/test_download_not_exist").unwrap();
-        let mut app = router(data_dir, db);
+        let mut app = router(data_dir, artifact_path, db);
 
         let response = send_request(
             &mut app,
@@ -357,9 +368,10 @@ mod tests {
 
     #[tokio::test]
     async fn list_repo() {
-        let data_dir = "data".to_string();
+        let data_dir = String::from("data");
+        let artifact_path = String::from("data/artifacts");
         let db = database::Database::new_rocksdb("data/router/test_list_repo").unwrap();
-        let mut app = router(data_dir, db);
+        let mut app = router(data_dir, artifact_path, db);
 
         let response = send_request(
             &mut app,
@@ -387,9 +399,10 @@ mod tests {
 
     #[tokio::test]
     async fn list_repo_multiple() {
-        let data_dir = "data".to_string();
+        let data_dir = String::from("data");
+        let artifact_path = String::from("data/artifacts");
         let db = database::Database::new_rocksdb("data/router/test_list_repo_multiple").unwrap();
-        let mut app = router(data_dir, db);
+        let mut app = router(data_dir, artifact_path, db);
 
         let response = send_request(
             &mut app,
@@ -422,9 +435,10 @@ mod tests {
 
     #[tokio::test]
     async fn list_commits() {
-        let data_dir = "data".to_string();
+        let data_dir = String::from("data");
+        let artifact_path = String::from("data/artifacts");
         let db = database::Database::new_rocksdb("data/router/test_list_commit").unwrap();
-        let mut app = router(data_dir, db);
+        let mut app = router(data_dir, artifact_path, db);
 
         let response = send_request(
             &mut app,
@@ -459,9 +473,10 @@ mod tests {
 
     #[tokio::test]
     async fn list_commits_multiple() {
-        let data_dir = "data".to_string();
+        let data_dir = String::from("data");
+        let artifact_path = String::from("data/artifacts");
         let db = database::Database::new_rocksdb("data/router/test_list_commit_multiple").unwrap();
-        let mut app = router(data_dir, db);
+        let mut app = router(data_dir, artifact_path, db);
 
         let response = send_request(
             &mut app,
@@ -504,9 +519,10 @@ mod tests {
 
     #[tokio::test]
     async fn list_artifacts() {
-        let data_dir = "data".to_string();
+        let data_dir = String::from("data");
+        let artifact_path = String::from("data/artifacts");
         let db = database::Database::new_rocksdb("data/router/test_list_artifacts").unwrap();
-        let mut app = router(data_dir, db);
+        let mut app = router(data_dir, artifact_path, db);
 
         let response = send_request(
             &mut app,
@@ -542,9 +558,10 @@ mod tests {
 
     #[tokio::test]
     async fn list_artifacts_multiple() {
-        let data_dir = "data".to_string();
+        let data_dir = String::from("data");
+        let artifact_path = String::from("data/artifacts");
         let db = database::Database::new_rocksdb("data/router/test_list_artifacts_multi").unwrap();
-        let mut app = router(data_dir, db);
+        let mut app = router(data_dir, artifact_path, db);
 
         let response = send_request(
             &mut app,
