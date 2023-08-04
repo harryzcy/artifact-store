@@ -16,14 +16,14 @@ use crate::{database, error::HandleRequestError};
 type SharedState = Arc<RwLock<RouterState>>;
 
 pub struct RouterState {
-    pub data_dir: String,
+    pub data_path: String,
     pub artifact_path: String,
     pub db: database::Database,
 }
 
-pub fn router(data_dir: String, artifact_path: String, db: database::Database) -> Router {
+pub fn router(data_path: String, artifact_path: String, db: database::Database) -> Router {
     let shared_state = SharedState::new(RwLock::new(RouterState {
-        data_dir,
+        data_path,
         artifact_path,
         db,
     }));

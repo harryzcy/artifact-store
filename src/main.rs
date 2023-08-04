@@ -15,7 +15,7 @@ async fn main() {
     let addr = SocketAddr::from(([0, 0, 0, 0], 3001));
     println!("listening on {}", addr);
     axum::Server::bind(&addr)
-        .serve(router::router(conf.data_dir, conf.artifact_path, db).into_make_service())
+        .serve(router::router(conf.data_path, conf.artifact_path, db).into_make_service())
         .with_graceful_shutdown(shutdown_signal())
         .await
         .unwrap();
