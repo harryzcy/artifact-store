@@ -43,7 +43,7 @@ async fn ping_handler() -> &'static str {
 }
 
 #[derive(Serialize)]
-struct Response {
+struct SimpleResponse {
     code: u16,
     message: String,
 }
@@ -53,7 +53,7 @@ async fn list_repos_handler(State(state): State<SharedState>) -> impl IntoRespon
     let response = match storage::list_repos(db).await {
         Ok(res) => res,
         Err(e) => {
-            let response = Response {
+            let response = SimpleResponse {
                 code: 500,
                 message: format!("{}", e),
             };
@@ -72,7 +72,7 @@ async fn list_commits_handler(
     let response = match storage::list_commits(db, params).await {
         Ok(res) => res,
         Err(e) => {
-            let response = Response {
+            let response = SimpleResponse {
                 code: 500,
                 message: format!("{}", e),
             };
@@ -92,11 +92,11 @@ async fn list_artifacts_handler(
         Ok(res) => res,
         Err(e) => match e {
             HandleRequestError::NotFound(message) => {
-                let response = Response { code: 404, message };
+                let response = SimpleResponse { code: 404, message };
                 return serde_json::to_string(&response).unwrap();
             }
             _ => {
-                let response = Response {
+                let response = SimpleResponse {
                     code: 500,
                     message: format!("{}", e),
                 };
@@ -112,13 +112,14 @@ async fn upload_handler(
     Path(params): Path<storage::UploadParams>,
     State(state): State<SharedState>,
     stream: BodyStream,
-) -> Json<Response> {
+) -> Json<SimpleResponse> {
+    println!("upload_handler");
     let data_dir = &state.read().await.data_dir;
     let db = &state.read().await.db;
     match storage::store_file(data_dir, db, params, stream).await {
         Ok(_) => (),
         Err(e) => {
-            let response = Response {
+            let response = SimpleResponse {
                 code: 500,
                 message: format!("{}", e),
             };
@@ -126,7 +127,7 @@ async fn upload_handler(
         }
     }
 
-    let response = Response {
+    let response = SimpleResponse {
         code: 200,
         message: String::from("OK"),
     };
@@ -162,6 +163,7 @@ mod tests {
     use super::*;
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
+    use tower::Service;
     use tower::ServiceExt;
 
     #[tokio::test]
@@ -200,5 +202,62 @@ mod tests {
         assert_eq!(&body[..], b"pong");
 
         std::fs::remove_dir_all("data/test_ping_route").unwrap();
+    }
+
+    async fn send_request(
+        mut app: &mut Router,
+        method: &str,
+        uri: &str,
+        body: Body,
+    ) -> http::Response<http_body::combinators::UnsyncBoxBody<bytes::Bytes, axum::Error>> {
+        let request = Request::builder()
+            .uri(uri)
+            .method(method)
+            .body(body)
+            .unwrap();
+        let response = ServiceExt::<Request<Body>>::ready(&mut app)
+            .await
+            .unwrap()
+            .call(request)
+            .await
+            .unwrap();
+
+        response
+    }
+
+    #[tokio::test]
+    async fn upload_download_empty() {
+        let data_dir = "data".to_string();
+        let db = database::Database::new_rocksdb("data/test_upload_download").unwrap();
+        let mut app = router(data_dir, db);
+
+        let response = send_request(
+            &mut app,
+            "PUT",
+            "/git.example.dev/owner/repo/commit/dir/test_upload_download.txt",
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert!(!body.is_empty());
+        let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
+        assert_eq!(value["code"], 200);
+        assert_eq!(value["message"], "OK");
+
+        let response = send_request(
+            &mut app,
+            "GET",
+            "/git.example.dev/owner/repo/commit/dir/test_upload_download.txt",
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert!(body.is_empty());
+
+        std::fs::remove_dir_all("data/test_upload_download").unwrap();
     }
 }
