@@ -162,7 +162,7 @@ async fn download_handler(
 mod tests {
     use super::*;
     use axum::body::Body;
-    use axum::http::{Request, StatusCode};
+    use axum::http::Request;
     use tower::Service;
     use tower::ServiceExt;
 
