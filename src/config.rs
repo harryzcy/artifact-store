@@ -18,7 +18,7 @@ pub fn load() -> Config {
         Ok(dir) => dir,
         Err(_) => format!("{}/rocksdb", data_path).to_string(),
     };
-    let artifact_path = match var("ARTIFACT_PATH") {
+    let artifact_path = match var("ARTIFACTS_PATH") {
         Ok(dir) => dir,
         Err(_) => format!("{}/artifacts", data_path).to_string(),
     };
