@@ -215,14 +215,12 @@ mod tests {
             .method(method)
             .body(body)
             .unwrap();
-        let response = ServiceExt::<Request<Body>>::ready(&mut app)
+        ServiceExt::<Request<Body>>::ready(&mut app)
             .await
             .unwrap()
             .call(request)
             .await
-            .unwrap();
-
-        response
+            .unwrap()
     }
 
     #[tokio::test]
