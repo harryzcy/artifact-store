@@ -3,6 +3,8 @@ use time::OffsetDateTime;
 
 type TransactionDB = rocksdb::OptimisticTransactionDB;
 
+const NANOSECONDS_PER_SECOND: i64 = 1_000_000_000;
+
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RepoData {
@@ -137,7 +139,7 @@ impl Database {
                 let owner = std::str::from_utf8(&key_parts[2]).unwrap();
                 let repo = std::str::from_utf8(&key_parts[3]).unwrap();
                 let value = serde_json::from_slice::<RepoValue>(value).unwrap();
-                let time_seconds = (value.time_added / 1000) as i64;
+                let time_seconds = value.time_added as i64 / NANOSECONDS_PER_SECOND;
                 let time_added = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
                 Ok(RepoData {
                     server: server.to_string(),
@@ -181,8 +183,8 @@ impl Database {
                 // parts: ["commit_time", server, owner, repo, time]
                 let key_parts = deserialize_key(key);
                 let time_part = key_parts.last().unwrap();
-                let time_millisecond = u128::from_be_bytes(time_part[0..16].try_into().unwrap());
-                let time_seconds = (time_millisecond / 1000) as i64;
+                let time_nano = u128::from_be_bytes(time_part[0..16].try_into().unwrap());
+                let time_seconds = time_nano as i64 / NANOSECONDS_PER_SECOND;
                 let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
 
                 let value_str = std::str::from_utf8(value).unwrap();
@@ -255,7 +257,7 @@ impl Database {
 
                 let value_str = std::str::from_utf8(value).unwrap();
                 let value = serde_json::from_str::<ArtifactValue>(value_str).unwrap();
-                let time_seconds = (value.time_added / 1000) as i64;
+                let time_seconds = value.time_added as i64 / NANOSECONDS_PER_SECOND;
                 let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
 
                 Ok(ArtifactData {
@@ -672,7 +674,7 @@ mod tests {
     fn test_list_artifacts() {
         let db = Database::new_rocksdb("data/test_list_artifacts").unwrap();
         let tx = db.transaction();
-        let time_milliseconds = 1234567890 * 1000;
+        let time_milliseconds = 1234567890 * NANOSECONDS_PER_SECOND as u128;
         let params = CreateArtifactParams {
             commit: &"1234567890abcdef".to_string(),
             path: &"path/to/artifact".to_string(),
