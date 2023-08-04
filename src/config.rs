@@ -10,7 +10,7 @@ pub struct Config {
 }
 
 pub fn load() -> Config {
-    let data_dir = match var("DATA_DIR") {
+    let data_dir = match var("DATA_PATH") {
         Ok(dir) => dir,
         Err(_) => "/data".to_string(),
     };

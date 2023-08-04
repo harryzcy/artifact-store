@@ -4,8 +4,8 @@ The missing piece in my build & deployment lifecycle. It stores the artifacts fr
 
 ## Runtime Environment Variables
 
-- `DATA_DIR`: the directory to store all the data, default to `/data`
-- `ROCKSDB_PATH`: the path for RocksDB, default to `${DATA_DIR}/rocksdb`
+- `DATA_PATH`: the directory to store all the data, default to `/data`
+- `ROCKSDB_PATH`: the path for RocksDB, default to `${DATA_PATH}/rocksdb`
 
 ## API
 
