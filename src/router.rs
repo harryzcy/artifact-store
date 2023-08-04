@@ -299,6 +299,43 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn upload_download_latest() {
+        let data_dir = "data".to_string();
+        let db = database::Database::new_rocksdb("data/test_upload_download_latest").unwrap();
+        let mut app = router(data_dir, db);
+
+        let response = send_request(
+            &mut app,
+            "PUT",
+            "/git.example.dev/owner/repo-latest/commit/dir/test_upload_download_latest.txt",
+            Body::from("test_upload_download_latest"),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert!(!body.is_empty());
+        let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
+        assert_eq!(value["code"], 200);
+        assert_eq!(value["message"], "OK");
+
+        let response = send_request(
+            &mut app,
+            "GET",
+            "/git.example.dev/owner/repo-latest/@latest/dir/test_upload_download_latest.txt",
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert!(!body.is_empty());
+        assert!(body.starts_with(b"test_upload_download_latest"));
+
+        std::fs::remove_dir_all("data/test_upload_download_latest").unwrap();
+    }
+
+    #[tokio::test]
     async fn download_not_exist() {
         let data_dir = "data".to_string();
         let db = database::Database::new_rocksdb("data/test_download_not_exist").unwrap();
