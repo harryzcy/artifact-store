@@ -228,13 +228,13 @@ mod tests {
     #[tokio::test]
     async fn upload_download_empty() {
         let data_dir = "data".to_string();
-        let db = database::Database::new_rocksdb("data/test_upload_download").unwrap();
+        let db = database::Database::new_rocksdb("data/test_upload_download_empty").unwrap();
         let mut app = router(data_dir, db);
 
         let response = send_request(
             &mut app,
             "PUT",
-            "/git.example.dev/owner/repo/commit/dir/test_upload_download.txt",
+            "/git.example.dev/owner/repo/commit/dir/test_upload_download_empty.txt",
             Body::empty(),
         )
         .await;
@@ -249,7 +249,7 @@ mod tests {
         let response = send_request(
             &mut app,
             "GET",
-            "/git.example.dev/owner/repo/commit/dir/test_upload_download.txt",
+            "/git.example.dev/owner/repo/commit/dir/test_upload_download_empty.txt",
             Body::empty(),
         )
         .await;
@@ -258,6 +258,43 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         assert!(body.is_empty());
 
-        std::fs::remove_dir_all("data/test_upload_download").unwrap();
+        std::fs::remove_dir_all("data/test_upload_download_empty").unwrap();
+    }
+
+    #[tokio::test]
+    async fn upload_download_binary() {
+        let data_dir = "data".to_string();
+        let db = database::Database::new_rocksdb("data/upload_download_binary").unwrap();
+        let mut app = router(data_dir, db);
+
+        let response = send_request(
+            &mut app,
+            "PUT",
+            "/git.example.dev/owner/repo/commit/dir/upload_download_binary.txt",
+            Body::from("upload_download_binary"),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert!(!body.is_empty());
+        let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
+        assert_eq!(value["code"], 200);
+        assert_eq!(value["message"], "OK");
+
+        let response = send_request(
+            &mut app,
+            "GET",
+            "/git.example.dev/owner/repo/commit/dir/upload_download_binary.txt",
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert!(!body.is_empty());
+        assert!(body.starts_with(b"upload_download_binary"));
+
+        std::fs::remove_dir_all("data/upload_download_binary").unwrap();
     }
 }
