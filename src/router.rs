@@ -113,7 +113,6 @@ async fn upload_handler(
     State(state): State<SharedState>,
     stream: BodyStream,
 ) -> Json<SimpleResponse> {
-    println!("upload_handler");
     let data_dir = &state.read().await.data_dir;
     let db = &state.read().await.db;
     match storage::store_file(data_dir, db, params, stream).await {
@@ -291,7 +290,7 @@ mod tests {
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         assert!(!body.is_empty());
-        assert!(body.starts_with(b"test_upload_download_binary"));
+        assert!(&body[..] == b"test_upload_download_binary");
 
         std::fs::remove_dir_all("data/test_upload_download_binary").unwrap();
     }
@@ -328,7 +327,7 @@ mod tests {
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         assert!(!body.is_empty());
-        assert!(body.starts_with(b"test_upload_download_latest"));
+        assert!(&body[..] == b"test_upload_download_latest");
 
         std::fs::remove_dir_all("data/test_upload_download_latest").unwrap();
     }
@@ -352,5 +351,152 @@ mod tests {
         assert!(!body.is_empty());
 
         std::fs::remove_dir_all("data/test_download_not_exist").unwrap();
+    }
+
+    #[tokio::test]
+    async fn list_repo() {
+        let data_dir = "data".to_string();
+        let db = database::Database::new_rocksdb("data/test_list_repo").unwrap();
+        let mut app = router(data_dir, db);
+
+        let response = send_request(
+            &mut app,
+            "PUT",
+            "/git.example.dev/owner/repo/commit/dir/test_list_repo.txt",
+            Body::from("test_list_repo"),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let response = send_request(&mut app, "GET", "/repositories", Body::empty()).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert!(!body.is_empty());
+
+        let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
+        assert_eq!(value["repos"].as_array().unwrap().len(), 1);
+        assert_eq!(value["repos"][0]["server"], "git.example.dev");
+        assert_eq!(value["repos"][0]["owner"], "owner");
+        assert_eq!(value["repos"][0]["repo"], "repo");
+
+        std::fs::remove_dir_all("data/test_list_repo").unwrap();
+    }
+
+    #[tokio::test]
+    async fn list_repo_multiple() {
+        let data_dir = "data".to_string();
+        let db = database::Database::new_rocksdb("data/test_list_repo_multiple").unwrap();
+        let mut app = router(data_dir, db);
+
+        let response = send_request(
+            &mut app,
+            "PUT",
+            "/git.example.dev/owner/repo/commit/dir/test_list_repo_multiple.txt",
+            Body::from("test_list_repo_multiple"),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let response = send_request(
+            &mut app,
+            "PUT",
+            "/git.example.dev/owner/repo-2/commit-2/dir/test_list_repo_multiple.txt",
+            Body::from("test_list_repo_multiple-2"),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let response = send_request(&mut app, "GET", "/repositories", Body::empty()).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert!(!body.is_empty());
+
+        let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
+        assert_eq!(value["repos"].as_array().unwrap().len(), 2);
+
+        std::fs::remove_dir_all("data/test_list_repo_multiple").unwrap();
+    }
+
+    #[tokio::test]
+    async fn list_commits() {
+        let data_dir = "data".to_string();
+        let db = database::Database::new_rocksdb("data/test_list_commit").unwrap();
+        let mut app = router(data_dir, db);
+
+        let response = send_request(
+            &mut app,
+            "PUT",
+            "/git.example.dev/owner/repo/commit/dir/test_list_commit.txt",
+            Body::from("test_list_commit"),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let response = send_request(
+            &mut app,
+            "GET",
+            "/git.example.dev/owner/repo",
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert!(!body.is_empty());
+
+        let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
+        assert_eq!(value["server"], "git.example.dev");
+        assert_eq!(value["owner"], "owner");
+        assert_eq!(value["repo"], "repo");
+        assert_eq!(value["commits"].as_array().unwrap().len(), 1);
+        assert_eq!(value["commits"][0]["commit"], "commit");
+
+        std::fs::remove_dir_all("data/test_list_commit").unwrap();
+    }
+
+    #[tokio::test]
+    async fn list_commits_multiple() {
+        let data_dir = "data".to_string();
+        let db = database::Database::new_rocksdb("data/test_list_commit_multi").unwrap();
+        let mut app = router(data_dir, db);
+
+        let response = send_request(
+            &mut app,
+            "PUT",
+            "/git.example.dev/owner/repo/commit-1/dir/test-1.txt",
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        tokio::time::sleep(core::time::Duration::from_secs(1)).await;
+        let response = send_request(
+            &mut app,
+            "PUT",
+            "/git.example.dev/owner/repo/commit-2/dir/test-2.txt",
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let response = send_request(
+            &mut app,
+            "GET",
+            "/git.example.dev/owner/repo",
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert!(!body.is_empty());
+
+        let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
+        assert_eq!(value["server"], "git.example.dev");
+        assert_eq!(value["owner"], "owner");
+        assert_eq!(value["repo"], "repo");
+        assert_eq!(value["commits"].as_array().unwrap().len(), 2);
+
+        std::fs::remove_dir_all("data/test_list_commit_multi").unwrap();
     }
 }

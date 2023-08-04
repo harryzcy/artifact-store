@@ -326,7 +326,6 @@ impl Transaction<'_> {
             params.owner.as_bytes(),
             params.repo.as_bytes(),
         ]);
-        // let value = time.to_be_bytes();
         let value = RepoValue { time_added: time };
 
         match self {
