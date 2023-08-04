@@ -122,7 +122,7 @@ pub async fn store_file(
     params: UploadParams,
     mut stream: BodyStream,
 ) -> Result<(), HandleRequestError> {
-    let time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
+    let time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
     let dir = format!(
         "{}/{}/{}/{}/{}",
         base_dir, params.server, params.owner, params.repo, params.commit
