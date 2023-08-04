@@ -40,25 +40,51 @@ mod tests {
         {
             remove_var("DATA_PATH");
             remove_var("ROCKSDB_PATH");
+            remove_var("ARTIFACTS_PATH");
             let config = load();
             assert_eq!(config.data_path, "/data");
             assert_eq!(config.rocksdb_path, "/data/rocksdb");
+            assert_eq!(config.artifact_path, "/data/artifacts");
         }
 
         {
             set_var("DATA_PATH", "/data");
             remove_var("ROCKSDB_PATH");
+            remove_var("ARTIFACTS_PATH");
             let config = load();
             assert_eq!(config.data_path, "/data");
             assert_eq!(config.rocksdb_path, "/data/rocksdb");
+            assert_eq!(config.artifact_path, "/data/artifacts");
         }
 
         {
             set_var("DATA_PATH", "/data");
             set_var("ROCKSDB_PATH", "/etc/rocksdb");
+            remove_var("ARTIFACTS_PATH");
             let config = load();
             assert_eq!(config.data_path, "/data");
             assert_eq!(config.rocksdb_path, "/etc/rocksdb");
+            assert_eq!(config.artifact_path, "/data/artifacts");
+        }
+
+        {
+            set_var("DATA_PATH", "/data");
+            remove_var("ROCKSDB_PATH");
+            set_var("ARTIFACTS_PATH", "/etc/artifacts");
+            let config = load();
+            assert_eq!(config.data_path, "/data");
+            assert_eq!(config.rocksdb_path, "/data/rocksdb");
+            assert_eq!(config.artifact_path, "/etc/artifacts");
+        }
+
+        {
+            set_var("DATA_PATH", "/data");
+            set_var("ROCKSDB_PATH", "/etc/rocksdb");
+            set_var("ARTIFACTS_PATH", "/etc/artifacts");
+            let config = load();
+            assert_eq!(config.data_path, "/data");
+            assert_eq!(config.rocksdb_path, "/etc/rocksdb");
+            assert_eq!(config.artifact_path, "/etc/artifacts");
         }
     }
 }
