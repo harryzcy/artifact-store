@@ -499,4 +499,87 @@ mod tests {
 
         std::fs::remove_dir_all("data/test_list_commit_multi").unwrap();
     }
+
+    #[tokio::test]
+    async fn list_artifacts() {
+        let data_dir = "data".to_string();
+        let db = database::Database::new_rocksdb("data/test_list_artifacts").unwrap();
+        let mut app = router(data_dir, db);
+
+        let response = send_request(
+            &mut app,
+            "PUT",
+            "/git.example.dev/owner/repo/commit/dir/test_list_artifacts.txt",
+            Body::from("test_list_artifacts"),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let response = send_request(
+            &mut app,
+            "GET",
+            "/git.example.dev/owner/repo/commit",
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert!(!body.is_empty());
+
+        let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
+        assert_eq!(value["server"], "git.example.dev");
+        assert_eq!(value["owner"], "owner");
+        assert_eq!(value["repo"], "repo");
+        assert_eq!(value["commit"], "commit");
+        assert_eq!(value["artifacts"].as_array().unwrap().len(), 1);
+        assert_eq!(value["artifacts"][0]["path"], "dir/test_list_artifacts.txt");
+
+        std::fs::remove_dir_all("data/test_list_artifacts").unwrap();
+    }
+
+    #[tokio::test]
+    async fn list_artifacts_multiple() {
+        let data_dir = "data".to_string();
+        let db = database::Database::new_rocksdb("data/test_list_artifacts_multi").unwrap();
+        let mut app = router(data_dir, db);
+
+        let response = send_request(
+            &mut app,
+            "PUT",
+            "/git.example.dev/owner/repo/commit/dir/test_list_artifacts_multi.txt",
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let response = send_request(
+            &mut app,
+            "PUT",
+            "/git.example.dev/owner/repo/commit/dir/test_list_artifacts_multi-2.txt",
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let response = send_request(
+            &mut app,
+            "GET",
+            "/git.example.dev/owner/repo/commit",
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert!(!body.is_empty());
+
+        let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
+        assert_eq!(value["server"], "git.example.dev");
+        assert_eq!(value["owner"], "owner");
+        assert_eq!(value["repo"], "repo");
+        assert_eq!(value["commit"], "commit");
+        assert_eq!(value["artifacts"].as_array().unwrap().len(), 2);
+
+        std::fs::remove_dir_all("data/test_list_artifacts_multi").unwrap();
+    }
 }
