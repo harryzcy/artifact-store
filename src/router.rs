@@ -471,7 +471,6 @@ mod tests {
         )
         .await;
         assert_eq!(response.status(), StatusCode::OK);
-        tokio::time::sleep(core::time::Duration::from_secs(1)).await;
         let response = send_request(
             &mut app,
             "PUT",
