@@ -31,7 +31,10 @@ name = "artifact-store"
 version = "0.0.1"
 dependencies = [
  "axum",
+ "bytes",
  "futures-util",
+ "http",
+ "http-body",
  "hyper",
  "rocksdb",
  "serde",
