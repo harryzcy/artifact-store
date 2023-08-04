@@ -1,4 +1,4 @@
-FROM rust:1.71.0-bullseye AS builder
+FROM rust:1.71.1-bullseye AS builder
 
 WORKDIR /app
 
