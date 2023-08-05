@@ -11,7 +11,7 @@ FROM gcr.io/distroless/cc-debian11
 
 WORKDIR /app
 
-COPY --from=source --chown=nonroot:nonroot /data /data
+COPY --from=builder --chown=nonroot:nonroot /data /data
 COPY --from=builder /app/target/release/artifact-store ./
 
 USER nonroot:nonroot
