@@ -32,7 +32,7 @@ jobs:
         run: cargo test --verbose
 
   docker:
-    name: Docker Build
+    name: Docker
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -43,3 +43,12 @@ jobs:
           context: .
           platforms: linux/amd64
           push: false
+          tags: harryzcy/artifact-store:ci
+
+      - name: Test docker image
+        run: |
+          docker run -d --rm --name artifact-store -p 3001:3001 harryzcy/artifact-store:ci
+          sleep 5
+          curl -sSf http://localhost:3001/ping
+          echo
+          docker stop artifact-store
