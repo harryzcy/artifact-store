@@ -50,4 +50,5 @@ jobs:
           docker run -d --rm --name artifact-store -p 3001:3001 harryzcy/artifact-store:ci
           sleep 5
           curl -sSf http://localhost:3001/ping
+          echo
           docker stop artifact-store
