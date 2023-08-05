@@ -11,9 +11,8 @@ FROM gcr.io/distroless/cc-debian11
 
 WORKDIR /app
 
+COPY --from=source --chown=nonroot:nonroot /data /data
 COPY --from=builder /app/target/release/artifact-store ./
-
-RUN mkdir /data && chown -R nonroot:nonroot /data && chown nonroot:nonroot /data
 
 USER nonroot:nonroot
 EXPOSE 3001
