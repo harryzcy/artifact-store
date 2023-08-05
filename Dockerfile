@@ -14,5 +14,6 @@ WORKDIR /app
 COPY --from=builder /app/target/release/artifact-store ./
 
 USER nonroot:nonroot
+EXPOSE 3001
 
 CMD ["/app/artifact-store"]
