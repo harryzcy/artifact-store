@@ -6,6 +6,7 @@ COPY ./ .
 
 RUN apt-get update && apt-get install -y libclang-dev
 RUN cargo build --release
+RUN mkdir /data
 
 FROM gcr.io/distroless/cc-debian11
 
