@@ -13,6 +13,8 @@ WORKDIR /app
 
 COPY --from=builder /app/target/release/artifact-store ./
 
+RUN mkdir /data && chown -R nonroot:nonroot /data && chown nonroot:nonroot /data
+
 USER nonroot:nonroot
 EXPOSE 3001
 
