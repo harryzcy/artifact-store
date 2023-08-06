@@ -10,7 +10,7 @@ The recommended way to run is to use Docker:
 docker run -p 3001:3001 ghcr.io/harryzcy/artifact-store
 ```
 
-Note: the docker image uses `nonroot` user, (UID and GID: 65532) by default,
+Note: the docker image uses `nonroot` user (UID and GID: 65532) by default,
 so when mounting persistent volume, the permission need to be set accordingly.
 
 ## Runtime Environment Variables
