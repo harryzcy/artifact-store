@@ -2,6 +2,17 @@
 
 The missing piece in my build & deployment lifecycle. It stores the artifacts from by CI pipeline.
 
+## Quick Start
+
+The recommended way to run is to use Docker:
+
+```shell
+docker run -p 3001:3001 ghcr.io/harryzcy/artifact-store
+```
+
+Note: the docker image uses `nonroot` user (UID and GID: 65532) by default,
+so when mounting persistent volume, the permission need to be set accordingly.
+
 ## Runtime Environment Variables
 
 - `DATA_PATH`: the directory to store all the data, default to `/data`
