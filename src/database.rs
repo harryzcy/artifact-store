@@ -198,7 +198,7 @@ impl Database {
                 }
 
                 // time_part is expected to be a u128
-                let time_nano = u128::from_be_bytes(time_part[..].try_into().unwrap());
+                let time_nano = u128::from_be_bytes(time_part[0..16].try_into().unwrap());
                 let time_seconds = time_nano as i64 / NANOSECONDS_PER_SECOND;
                 let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
 
