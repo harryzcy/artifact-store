@@ -359,12 +359,17 @@ impl Transaction<'_> {
         ]);
         let commit_value = CommitValue { time_added: time };
 
+        let time_bytes = time.to_be_bytes();
+        #[cfg(test)]
+        {
+            assert_eq!(time_bytes.len(), 16);
+        }
         let commit_time_key = serialize_key(vec![
             "commit_time".as_bytes(),
             params.server.as_bytes(),
             params.owner.as_bytes(),
             params.repo.as_bytes(),
-            &time.to_be_bytes(),
+            &time_bytes,
         ]);
         let commit_time_value = CommitTimeValue {
             commit: params.commit.clone(),
