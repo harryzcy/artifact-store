@@ -183,7 +183,9 @@ impl Database {
                 // parts: ["commit_time", server, owner, repo, time]
                 let key_parts = deserialize_key(key);
                 let time_part = key_parts.last().unwrap();
-                let time_nano = u128::from_be_bytes(time_part[0..16].try_into().unwrap());
+
+                // time_part is expected to be a u128
+                let time_nano = u128::from_be_bytes(time_part[..].try_into().unwrap());
                 let time_seconds = time_nano as i64 / NANOSECONDS_PER_SECOND;
                 let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
 
@@ -581,14 +583,14 @@ mod tests {
     fn test_list_commits() {
         let db = Database::new_rocksdb("data/test_list_commits").unwrap();
         let tx = db.transaction();
-        let time = 1234567890;
+        let time_nano = 1234567890 * NANOSECONDS_PER_SECOND as u128;
         let params = CreateCommitParams {
             commit: &"1234567890abcdef".to_string(),
             server: &"github.com".to_string(),
             owner: &"owner".to_string(),
             repo: &"repo".to_string(),
         };
-        tx.create_commit_if_not_exists(time, params).unwrap();
+        tx.create_commit_if_not_exists(time_nano, params).unwrap();
         tx.commit().unwrap();
 
         let commits = db
@@ -600,6 +602,10 @@ mod tests {
             .unwrap();
         assert_eq!(commits.len(), 1);
         assert_eq!(commits[0].commit, "1234567890abcdef");
+        assert_eq!(
+            commits[0].time_added.unix_timestamp_nanos(),
+            time_nano as i128
+        );
 
         remove_db("data/test_list_commits");
     }
