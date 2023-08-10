@@ -495,20 +495,6 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_time() {
-        let time = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let time_bytes = time.to_be_bytes().to_vec();
-        let extracted = extract_time(&time_bytes);
-        assert_eq!(
-            time as i64 / NANOSECONDS_PER_SECOND,
-            extracted.unix_timestamp()
-        );
-    }
-
-    #[test]
     fn test_key_simple() {
         let key = serialize_key(vec![
             "repo".as_bytes(),
@@ -538,6 +524,39 @@ mod tests {
         assert_eq!(deserialized[0], "repo".as_bytes());
         assert_eq!(deserialized[1], "github.com".as_bytes());
         assert_eq!(deserialized[2], "owner#with#hashes".as_bytes());
+    }
+
+    #[test]
+    fn test_extract_time() {
+        let time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let time_bytes = time.to_be_bytes().to_vec();
+        let extracted = extract_time(&time_bytes);
+        assert_eq!(
+            time as i64 / NANOSECONDS_PER_SECOND,
+            extracted.unix_timestamp()
+        );
+    }
+
+    #[test]
+    fn test_extract_time_from_key() {
+        let time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+
+        let bytes = serialize_key(vec![&time.to_be_bytes()]);
+        let deserialized = deserialize_key(&bytes);
+        assert_eq!(deserialized.len(), 1);
+        assert_eq!(deserialized[0], time.to_be_bytes());
+
+        let extracted = extract_time(deserialized.last().unwrap());
+        assert_eq!(
+            time as i64 / NANOSECONDS_PER_SECOND,
+            extracted.unix_timestamp()
+        );
     }
 
     #[test]
