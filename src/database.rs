@@ -191,6 +191,10 @@ impl Database {
                 #[cfg(test)]
                 {
                     println!("got time_part: {:?}", time_part);
+                    let _ = match time_part.len() {
+                        16 => (),
+                        _ => panic!("expected time_part to be 16 bytes"),
+                    };
                 }
 
                 // time_part is expected to be a u128
