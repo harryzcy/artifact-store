@@ -183,6 +183,7 @@ impl Database {
                 // parts: ["commit_time", server, owner, repo, time]
                 let key_parts = deserialize_key(key);
                 let time_part = key_parts.last().unwrap();
+
                 // time_part is expected to be a u128
                 let time_nano = u128::from_be_bytes(time_part[..].try_into().unwrap());
                 let time_seconds = time_nano as i64 / NANOSECONDS_PER_SECOND;
