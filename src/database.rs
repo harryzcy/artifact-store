@@ -374,6 +374,7 @@ impl Transaction<'_> {
         let time_bytes = time.to_be_bytes();
         #[cfg(test)]
         {
+            println!("create time_bytes: {:?}", time_bytes);
             assert_eq!(time_bytes.len(), 16);
         }
         let commit_time_key = serialize_key(vec![
