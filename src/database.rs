@@ -583,14 +583,14 @@ mod tests {
     fn test_list_commits() {
         let db = Database::new_rocksdb("data/test_list_commits").unwrap();
         let tx = db.transaction();
-        let time = 1234567890;
+        let time_nano = 1234567890 * NANOSECONDS_PER_SECOND as u128;
         let params = CreateCommitParams {
             commit: &"1234567890abcdef".to_string(),
             server: &"github.com".to_string(),
             owner: &"owner".to_string(),
             repo: &"repo".to_string(),
         };
-        tx.create_commit_if_not_exists(time, params).unwrap();
+        tx.create_commit_if_not_exists(time_nano, params).unwrap();
         tx.commit().unwrap();
 
         let commits = db
@@ -602,6 +602,10 @@ mod tests {
             .unwrap();
         assert_eq!(commits.len(), 1);
         assert_eq!(commits[0].commit, "1234567890abcdef");
+        assert_eq!(
+            commits[0].time_added.unix_timestamp_nanos(),
+            time_nano as i128
+        );
 
         remove_db("data/test_list_commits");
     }
