@@ -478,7 +478,7 @@ fn deserialize_key(key: &[u8]) -> Vec<Vec<u8>> {
     result
 }
 
-fn extract_time(bytes: &Vec<u8>) -> OffsetDateTime {
+fn extract_time(bytes: &[u8]) -> OffsetDateTime {
     let time_nano = u128::from_be_bytes(bytes[0..16].try_into().unwrap());
     let time_seconds = time_nano as i64 / NANOSECONDS_PER_SECOND;
     OffsetDateTime::from_unix_timestamp(time_seconds).unwrap()
