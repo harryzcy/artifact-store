@@ -180,6 +180,11 @@ impl Database {
         self.get_by_prefix(
             key_prefix,
             |key, value| {
+                #[cfg(test)]
+                {
+                    println!("got commit_time_key: {:?}", key);
+                }
+
                 // parts: ["commit_time", server, owner, repo, time]
                 let key_parts = deserialize_key(key);
                 let time_part = key_parts.last().unwrap();
@@ -385,6 +390,10 @@ impl Transaction<'_> {
                     commit_key,
                     serde_json::to_string(&commit_value).unwrap().as_bytes(),
                 )?;
+                #[cfg(test)]
+                {
+                    println!("add commit_time_key: {:?}", commit_time_key);
+                }
                 tx.put(
                     commit_time_key,
                     serde_json::to_string(&commit_time_value)
