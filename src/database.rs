@@ -495,7 +495,7 @@ mod tests {
     }
 
     #[test]
-    fn test_extrat_time() {
+    fn test_extract_time() {
         let time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
