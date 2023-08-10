@@ -15,15 +15,15 @@ categories:
       - "bug"
   - title: "🧰 Maintenance"
     label: "chore"
-  - title: "⬆️ Dependencies"
-    collapse-after: 3
-    labels:
-      - "dependencies"
   - title: "📝 Documentation"
     collapse-after: 3
     labels:
       - "docs"
       - "documentation"
+  - title: "⬆️ Dependencies"
+    collapse-after: 3
+    labels:
+      - "dependencies"
 exclude-labels:
   - "skip-changelog"
 change-title-escapes: '\<*_&'
