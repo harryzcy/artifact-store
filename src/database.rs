@@ -462,14 +462,16 @@ fn deserialize_key(key: &[u8]) -> Vec<Vec<u8>> {
     let mut part: Vec<u8> = Vec::new();
     let mut escape = false;
     for byte in key {
-        if *byte == b'\\' && !escape {
+        if escape {
+            part.push(*byte);
+            escape = false;
+        } else if *byte == b'\\' {
             escape = true;
-        } else if *byte == b'#' && !escape {
+        } else if *byte == b'#' {
             result.push(part);
             part = Vec::new();
         } else {
             part.push(*byte);
-            escape = false;
         }
     }
     result.push(part);
