@@ -445,7 +445,7 @@ fn serialize_key(parts: Vec<&[u8]>) -> Vec<u8> {
     for i in 0..parts.len() {
         let part = parts[i];
         for byte in part {
-            if *byte == b'#' {
+            if *byte == b'#' || *byte == b'\\' {
                 result.push(b'\\');
             }
             result.push(*byte);
@@ -462,16 +462,14 @@ fn deserialize_key(key: &[u8]) -> Vec<Vec<u8>> {
     let mut part: Vec<u8> = Vec::new();
     let mut escape = false;
     for byte in key {
-        if escape {
-            part.push(*byte);
-            escape = false;
-        } else if *byte == b'\\' {
+        if *byte == b'\\' && !escape {
             escape = true;
-        } else if *byte == b'#' {
+        } else if *byte == b'#' && !escape {
             result.push(part);
             part = Vec::new();
         } else {
             part.push(*byte);
+            escape = false;
         }
     }
     result.push(part);
@@ -492,6 +490,27 @@ mod tests {
 
     fn remove_db(path: &str) {
         let _ = std::fs::remove_dir_all(path);
+    }
+
+    #[test]
+    fn test_serialize() {
+        let key = vec![[0, 0, 0, 0, 0, 0, 0, 0, 23, 122, 45, 94, 28, 92, 20, 192].as_ref()];
+        let serialized = serialize_key(key);
+        assert_eq!(
+            serialized,
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 23, 122, 45, 94, 28, 92, 92, 20, 192]
+        );
+    }
+
+    #[test]
+    fn test_deserialize() {
+        let key = vec![0, 0, 0, 0, 0, 0, 0, 0, 23, 122, 45, 94, 28, 92, 92, 20, 192];
+        let deserialized = deserialize_key(&key);
+        assert_eq!(deserialized.len(), 1);
+        assert_eq!(
+            deserialized[0],
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 23, 122, 45, 94, 28, 92, 20, 192]
+        );
     }
 
     #[test]
