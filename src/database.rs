@@ -197,9 +197,7 @@ impl Database {
                 }
 
                 // time_part is expected to be a u128
-                let time_nano = u128::from_be_bytes(time_part[0..16].try_into().unwrap());
-                let time_seconds = time_nano as i64 / NANOSECONDS_PER_SECOND;
-                let time = OffsetDateTime::from_unix_timestamp(time_seconds).unwrap();
+                let time = extract_time(time_part);
 
                 let value_str = std::str::from_utf8(value).unwrap();
                 let value = serde_json::from_str::<CommitTimeValue>(value_str).unwrap();
@@ -502,8 +500,16 @@ fn deserialize_key(key: &[u8]) -> Vec<Vec<u8>> {
     result
 }
 
+fn extract_time(bytes: &[u8]) -> OffsetDateTime {
+    let time_nano = u128::from_be_bytes(bytes[0..16].try_into().unwrap());
+    let time_seconds = time_nano as i64 / NANOSECONDS_PER_SECOND;
+    OffsetDateTime::from_unix_timestamp(time_seconds).unwrap()
+}
+
 #[cfg(test)]
 mod tests {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
     use super::*;
 
     fn remove_db(path: &str) {
@@ -540,6 +546,39 @@ mod tests {
         assert_eq!(deserialized[0], "repo".as_bytes());
         assert_eq!(deserialized[1], "github.com".as_bytes());
         assert_eq!(deserialized[2], "owner#with#hashes".as_bytes());
+    }
+
+    #[test]
+    fn test_extract_time() {
+        let time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let time_bytes = time.to_be_bytes().to_vec();
+        let extracted = extract_time(&time_bytes);
+        assert_eq!(
+            time as i64 / NANOSECONDS_PER_SECOND,
+            extracted.unix_timestamp()
+        );
+    }
+
+    #[test]
+    fn test_extract_time_from_key() {
+        let time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+
+        let bytes = serialize_key(vec![&time.to_be_bytes()]);
+        let deserialized = deserialize_key(&bytes);
+        assert_eq!(deserialized.len(), 1);
+        assert_eq!(deserialized[0], time.to_be_bytes());
+
+        let extracted = extract_time(deserialized.last().unwrap());
+        assert_eq!(
+            time as i64 / NANOSECONDS_PER_SECOND,
+            extracted.unix_timestamp()
+        );
     }
 
     #[test]
