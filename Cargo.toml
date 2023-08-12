@@ -13,7 +13,7 @@ rocksdb = { version = "0.21.0", features = ["multi-threaded-cf"] }
 serde = { version = "1.0.183", features = ["derive"] }
 serde_json = "1.0.104"
 time = { version = "0.3.25", features = ["serde", "formatting"] }
-tokio = { version = "1.30.0", features = ["full"] }
+tokio = { version = "1.31.0", features = ["full"] }
 tokio-util = { version = "0.7.8", features = ["io"] }
 
 [dev-dependencies]
