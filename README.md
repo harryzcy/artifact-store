@@ -11,7 +11,7 @@ docker run -p 3001:3001 ghcr.io/harryzcy/artifact-store
 ```
 
 Note: the docker image uses `nonroot` user (UID and GID: 65532) by default,
-so when mounting persistent volume, the permission need to be set accordingly.
+so when mounting persistent volume, the permission need to be set accordingly. For more details, please refer to [docs/deployment.md](docs/deployment.md).
 
 ## Runtime Environment Variables
 
