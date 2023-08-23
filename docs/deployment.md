@@ -42,7 +42,7 @@ spec:
               mountPath: /data
       containers:
         - name: artifact-store
-          image: ghcr.io/harryzcy/artifact-store:0.1.1
+          image: ghcr.io/harryzcy/artifact-store:latest
           ports:
             - containerPort: 3001
               name: http
