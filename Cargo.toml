@@ -12,7 +12,7 @@ hyper = { version = "0.14.27", features = ["full"] }
 rocksdb = { version = "0.21.0", features = ["multi-threaded-cf"] }
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.105"
-time = { version = "0.3.27", features = ["serde", "formatting"] }
+time = { version = "0.3.28", features = ["serde", "formatting"] }
 tokio = { version = "1.32.0", features = ["full"] }
 tokio-util = { version = "0.7.8", features = ["io"] }
 
