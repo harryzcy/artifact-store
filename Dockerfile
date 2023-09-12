@@ -1,4 +1,4 @@
-FROM rust:1.72.0-bullseye AS builder
+FROM rust:1.72.0-bookworm AS builder
 
 WORKDIR /app
 
@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y libclang-dev
 RUN cargo build --release
 RUN mkdir /data
 
-FROM gcr.io/distroless/cc-debian11
+FROM gcr.io/distroless/cc-debian12
 
 WORKDIR /app
 
