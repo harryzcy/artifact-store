@@ -27,12 +27,6 @@ pub struct RouterState {
 }
 
 pub fn router(data_path: String, artifact_path: String, db: database::Database) -> Router {
-    tracing_subscriber::fmt()
-        .with_target(false)
-        .compact()
-        .json()
-        .init();
-
     let shared_state = SharedState::new(RwLock::new(RouterState {
         data_path,
         artifact_path,
