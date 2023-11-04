@@ -7,7 +7,8 @@ The missing piece in my build & deployment lifecycle. It stores the artifacts fr
 The recommended way to run is to use Docker:
 
 ```shell
-docker run -p 3001:3001 ghcr.io/harryzcy/artifact-store
+chown -R 65532:65532 /PATH/TO/DATA
+docker run -v /PATH/TO/DATA:/data -p 3001:3001 ghcr.io/harryzcy/artifact-store
 ```
 
 Note: the docker image uses `nonroot` user (UID and GID: 65532) by default,
