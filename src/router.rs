@@ -9,6 +9,11 @@ use axum::{
 use hyper::{header, StatusCode};
 use serde::Serialize;
 use tokio::sync::RwLock;
+use tower_http::{
+    trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
+    LatencyUnit,
+};
+use tracing::Level;
 
 use crate::storage;
 use crate::{database, error::HandleRequestError};
@@ -36,6 +41,15 @@ pub fn router(data_path: String, artifact_path: String, db: database::Database) 
         .route("/:server/:owner/:repo/:commit", get(list_artifacts_handler))
         .route("/:server/:owner/:repo/:commit/*path", put(upload_handler))
         .route("/:server/:owner/:repo/:commit/*path", get(download_handler))
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
+                .on_response(
+                    DefaultOnResponse::new()
+                        .level(Level::INFO)
+                        .latency_unit(LatencyUnit::Micros),
+                ),
+        )
         .with_state(Arc::clone(&shared_state))
 }
 

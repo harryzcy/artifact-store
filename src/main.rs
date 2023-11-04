@@ -9,6 +9,8 @@ mod storage;
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt().with_target(false).json().init();
+
     let conf = config::load();
     let db = database::Database::new_rocksdb(&conf.rocksdb_path).unwrap();
 
