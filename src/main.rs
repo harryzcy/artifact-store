@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
 use tokio::signal;
+use tracing::info;
 
 mod config;
 mod database;
@@ -14,8 +15,9 @@ async fn main() {
     let conf = config::load();
     let db = database::Database::new_rocksdb(&conf.rocksdb_path).unwrap();
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3001));
-    println!("listening on {}", addr);
+    let port = 3001;
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    info!(message = "starting server", port = addr.port());
     axum::Server::bind(&addr)
         .serve(router::router(conf.data_path, conf.artifact_path, db).into_make_service())
         .with_graceful_shutdown(shutdown_signal())
@@ -46,5 +48,5 @@ async fn shutdown_signal() {
         _ = terminate => {},
     }
 
-    println!("signal received, starting graceful shutdown");
+    info!(message = "starting graceful shutdown");
 }
