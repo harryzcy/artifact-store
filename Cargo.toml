@@ -22,5 +22,5 @@ tracing-subscriber = { version = "0.3.18", features = ["json"] }
 [dev-dependencies]
 bytes = "1.5.0"
 http = "1.0.0"
-http-body = "0.4.5"
+http-body = "1.0.0"
 tower = "0.4.13"
