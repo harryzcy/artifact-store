@@ -8,7 +8,7 @@ license = "MIT"
 [dependencies]
 axum = { version = "0.6.20", features = ["headers"] }
 futures-util = "0.3.29"
-hyper = { version = "0.14.27", features = ["full"] }
+hyper = { version = "1.0.0", features = ["full"] }
 rocksdb = { version = "0.21.0", features = ["multi-threaded-cf"] }
 serde = { version = "1.0.192", features = ["derive"] }
 serde_json = "1.0.108"
