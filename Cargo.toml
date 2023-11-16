@@ -23,4 +23,11 @@ tracing-subscriber = { version = "0.3.18", features = ["json"] }
 bytes = "1.5.0"
 http = "1.0.0"
 http-body = "1.0.0"
+http-body-util = "0.1.0"
 tower = "0.4.13"
+
+[patch.crates-io]
+# PR=https://github.com/tokio-rs/axum/pull/1882
+axum = { git = "https://github.com/tokio-rs/axum", rev = "807aa59fbb3da" }
+# PR=https://github.com/tower-rs/tower-http/pull/348
+tower-http = { git = "https://github.com/tower-rs/tower-http", rev = "602f06f248211" }

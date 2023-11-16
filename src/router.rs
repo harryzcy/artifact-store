@@ -181,6 +181,7 @@ mod tests {
     use super::*;
     use axum::body::Body;
     use axum::http::Request;
+    use http_body_util::BodyExt;
     use tower::Service;
     use tower::ServiceExt;
 
@@ -196,7 +197,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         assert_eq!(&body[..], b"<h1>Artifact Store</h1>");
@@ -216,9 +217,9 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = response.body().collect().await.unwrap();
         assert_eq!(&body[..], b"pong");
 
         std::fs::remove_dir_all("data/router/test_ping_route").unwrap();
@@ -229,7 +230,7 @@ mod tests {
         method: &str,
         uri: &str,
         body: Body,
-    ) -> http::Response<http_body::combinators::UnsyncBoxBody<bytes::Bytes, axum::Error>> {
+    ) -> http::Response<http_body_util::combinators::UnsyncBoxBody<bytes::Bytes, axum::Error>> {
         let request = Request::builder()
             .uri(uri)
             .method(method)
@@ -259,7 +260,10 @@ mod tests {
         .await;
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes();
         assert!(!body.is_empty());
         let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
         assert_eq!(value["code"], 200);
@@ -274,7 +278,10 @@ mod tests {
         .await;
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes();
         assert!(body.is_empty());
 
         std::fs::remove_dir_all("data/router/test_upload_download_empty").unwrap();
@@ -297,7 +304,10 @@ mod tests {
         .await;
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes();
         assert!(!body.is_empty());
         let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
         assert_eq!(value["code"], 200);
@@ -312,7 +322,10 @@ mod tests {
         .await;
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes();
         assert!(!body.is_empty());
         assert!(&body[..] == b"test_upload_download_binary");
 
@@ -336,7 +349,10 @@ mod tests {
         .await;
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes();
         assert!(!body.is_empty());
         let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
         assert_eq!(value["code"], 200);
@@ -351,7 +367,10 @@ mod tests {
         .await;
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes();
         assert!(!body.is_empty());
         assert!(&body[..] == b"test_upload_download_latest");
 
@@ -374,7 +393,10 @@ mod tests {
         .await;
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes();
         assert!(!body.is_empty());
 
         std::fs::remove_dir_all("data/router/test_download_not_exist").unwrap();
@@ -399,7 +421,10 @@ mod tests {
         let response = send_request(&mut app, "GET", "/repositories", Body::empty()).await;
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes();
         assert!(!body.is_empty());
 
         let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
@@ -438,7 +463,10 @@ mod tests {
         let response = send_request(&mut app, "GET", "/repositories", Body::empty()).await;
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes();
         assert!(!body.is_empty());
 
         let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
@@ -472,7 +500,10 @@ mod tests {
         .await;
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes();
         assert!(!body.is_empty());
 
         let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
@@ -518,7 +549,10 @@ mod tests {
         .await;
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes();
         assert!(!body.is_empty());
 
         let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
