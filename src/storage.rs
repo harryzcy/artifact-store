@@ -5,7 +5,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use axum::{body::StreamBody, extract::BodyStream};
+use axum::body::Body;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use tokio::fs::File;
@@ -120,7 +120,7 @@ pub async fn store_file(
     base_dir: &String,
     db: &database::Database,
     params: UploadParams,
-    mut stream: BodyStream,
+    mut stream: Body,
 ) -> Result<(), HandleRequestError> {
     let time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
     let dir = format!(
@@ -185,7 +185,7 @@ pub async fn prepare_download_file(
     data_dir: &String,
     db: &database::Database,
     params: DownloadParams,
-) -> Result<(String, StreamBody<ReaderStream<File>>), HandleRequestError> {
+) -> Result<(String, Body), HandleRequestError> {
     let commit = get_or_verify_commit(
         db,
         GetOrVerifyCommitParams {
@@ -224,7 +224,7 @@ pub async fn prepare_download_file(
         }
     };
     let stream: ReaderStream<File> = ReaderStream::new(file);
-    let body = StreamBody::new(stream);
+    let body = Body::from_stream(stream);
     Ok((params.path, body))
 }
 
