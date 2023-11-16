@@ -6,7 +6,9 @@ edition = "2021"
 license = "MIT"
 
 [dependencies]
-axum = { version = "0.6.20", features = ["headers"] }
+# axum = { version = "0.6.20", features = ["headers"] }
+# PR=https://github.com/tokio-rs/axum/pull/1882
+axum = { git = "https://github.com/tokio-rs/axum", rev = "6e2b97d9c50dea547b7a43b44efcedb2a8fd086a" }
 futures-util = "0.3.29"
 hyper = { version = "1.0.0", features = ["full"] }
 rocksdb = { version = "0.21.0", features = ["multi-threaded-cf"] }
@@ -27,7 +29,8 @@ http-body-util = "0.1.0"
 tower = "0.4.13"
 
 [patch.crates-io]
-# PR=https://github.com/tokio-rs/axum/pull/1882
-axum = { git = "https://github.com/tokio-rs/axum", rev = "807aa59fbb3da" }
+# for http 1.0. PR to update is merged but not published
+headers = { git = "https://github.com/hyperium/headers", rev = "4400aa90c47a7" }
+
 # PR=https://github.com/tower-rs/tower-http/pull/348
 tower-http = { git = "https://github.com/tower-rs/tower-http", rev = "602f06f248211" }
