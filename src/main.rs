@@ -1,4 +1,6 @@
-use std::net::SocketAddr;
+use axum::{extract::Request, response::Response, serve::IncomingStream};
+use futures_util::{future::poll_fn, FutureExt};
+use std::{convert::Infallible, net::SocketAddr};
 use tokio::{net::TcpListener, signal};
 use tracing::info;
 
@@ -6,6 +8,7 @@ mod config;
 mod database;
 mod error;
 mod router;
+mod serve;
 mod storage;
 
 #[tokio::main]
@@ -21,10 +24,7 @@ async fn main() {
 
     let listener = TcpListener::bind(&addr).await.unwrap();
     let router = router::router(conf.data_path, conf.artifact_path, db).into_make_service();
-    axum::serve(listener, router)
-        // .with_graceful_shutdown(shutdown_signal())
-        .await
-        .unwrap();
+    serve::serve(listener, router).await.unwrap();
 }
 
 async fn shutdown_signal() {
