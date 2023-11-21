@@ -1353,8 +1353,3 @@ dependencies = [
 name = "headers"
 version = "0.3.9"
 source = "git+https://github.com/hyperium/headers?rev=4400aa90c47a7#4400aa90c47a78a41be5f394bc19f420e2c0244a"
-
-[[patch.unused]]
-name = "tower-http"
-version = "0.4.4"
-source = "git+https://github.com/tower-rs/tower-http?rev=602f06f248211#602f06f248211b6eb5af59e1c7ae10c9177e25da"
