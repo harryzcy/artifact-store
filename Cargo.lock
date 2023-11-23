@@ -70,7 +70,7 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 [[package]]
 name = "axum"
 version = "0.6.16"
-source = "git+https://github.com/tokio-rs/axum?rev=f93a24277ccf76afb53ec7cc907dc54db0e870d3#f93a24277ccf76afb53ec7cc907dc54db0e870d3"
+source = "git+https://github.com/tokio-rs/axum?rev=20862d42f50ed6982907c50d4da41313ad7938bd#20862d42f50ed6982907c50d4da41313ad7938bd"
 dependencies = [
  "async-trait",
  "axum-core",
@@ -102,7 +102,7 @@ dependencies = [
 [[package]]
 name = "axum-core"
 version = "0.3.4"
-source = "git+https://github.com/tokio-rs/axum?rev=f93a24277ccf76afb53ec7cc907dc54db0e870d3#f93a24277ccf76afb53ec7cc907dc54db0e870d3"
+source = "git+https://github.com/tokio-rs/axum?rev=20862d42f50ed6982907c50d4da41313ad7938bd#20862d42f50ed6982907c50d4da41313ad7938bd"
 dependencies = [
  "async-trait",
  "bytes",
@@ -243,9 +243,9 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "form_urlencoded"
-version = "1.2.0"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a62bc1cf6f830c2ec14a513a9fb124d0a213a629668a4186f329db21fe045652"
+checksum = "e13624c2627564efccf4934284bdd98cbaa14e79b0b5a141218e507b3a823456"
 dependencies = [
  "percent-encoding",
 ]
@@ -663,9 +663,9 @@ checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
 
 [[package]]
 name = "percent-encoding"
-version = "2.3.0"
+version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b2a4787296e9989611394c33f193f676704af1686e70b8f8033ab5ba9a35a94"
+checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 
 [[package]]
 name = "pin-project"
@@ -1272,3 +1272,8 @@ dependencies = [
  "cc",
  "pkg-config",
 ]
+
+[[patch.unused]]
+name = "headers"
+version = "0.3.9"
+source = "git+https://github.com/hyperium/headers?rev=4400aa90c47a7#4400aa90c47a78a41be5f394bc19f420e2c0244a"
