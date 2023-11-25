@@ -7,7 +7,7 @@ license = "MIT"
 
 [dependencies]
 # axum = { version = "0.6.20", features = ["headers"] }
-axum = { git = "https://github.com/tokio-rs/axum", rev = "20862d42f50ed6982907c50d4da41313ad7938bd" }
+axum = { git = "https://github.com/tokio-rs/axum", rev = "906f803" }
 futures-util = "0.3.29"
 hyper = { version = "1.0.0", features = ["full"] }
 # hyper-util = { version = "0.1.1", features = ["tokio", "server", "server-auto"], optional = true }
@@ -28,7 +28,3 @@ http = "1.0.0"
 http-body = "1.0.0"
 http-body-util = "0.1.0"
 tower = "0.4.13"
-
-[patch.crates-io]
-# for http 1.0. PR to update is merged but not published
-headers = { git = "https://github.com/hyperium/headers", rev = "4400aa90c47a7" }

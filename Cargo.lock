@@ -70,7 +70,7 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 [[package]]
 name = "axum"
 version = "0.6.16"
-source = "git+https://github.com/tokio-rs/axum?rev=20862d42f50ed6982907c50d4da41313ad7938bd#20862d42f50ed6982907c50d4da41313ad7938bd"
+source = "git+https://github.com/tokio-rs/axum?rev=906f803#906f803a209185054e5b1dd6cb94137ad3442ec5"
 dependencies = [
  "async-trait",
  "axum-core",
@@ -102,7 +102,7 @@ dependencies = [
 [[package]]
 name = "axum-core"
 version = "0.3.4"
-source = "git+https://github.com/tokio-rs/axum?rev=20862d42f50ed6982907c50d4da41313ad7938bd#20862d42f50ed6982907c50d4da41313ad7938bd"
+source = "git+https://github.com/tokio-rs/axum?rev=906f803#906f803a209185054e5b1dd6cb94137ad3442ec5"
 dependencies = [
  "async-trait",
  "bytes",
@@ -304,9 +304,9 @@ dependencies = [
 
 [[package]]
 name = "gimli"
-version = "0.28.0"
+version = "0.28.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fb8d784f27acf97159b40fc4db5ecd8aa23b9ad5ef69cdd136d3bc80665f0c0"
+checksum = "4271d37baee1b8c7e4b708028c57d816cf9d2434acb33a549475f78c181f6253"
 
 [[package]]
 name = "glob"
@@ -1272,8 +1272,3 @@ dependencies = [
  "cc",
  "pkg-config",
 ]
-
-[[patch.unused]]
-name = "headers"
-version = "0.3.9"
-source = "git+https://github.com/hyperium/headers?rev=4400aa90c47a7#4400aa90c47a78a41be5f394bc19f420e2c0244a"
