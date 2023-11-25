@@ -120,7 +120,7 @@ pub async fn store_file(
     base_dir: &String,
     db: &database::Database,
     params: UploadParams,
-    mut stream: Body,
+    body: Body,
 ) -> Result<(), HandleRequestError> {
     let time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
     let dir = format!(
@@ -161,6 +161,7 @@ pub async fn store_file(
     fs::create_dir_all(path.parent().unwrap())?;
     let mut file = fs::File::create(path)?;
 
+    let mut stream = body.into_data_stream();
     while let Some(chunk) = stream.next().await {
         match chunk {
             Ok(c) => file.write_all(&c)?,

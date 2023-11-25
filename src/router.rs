@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     body::Body,
-    extract::{Path, State},
+    extract::{Path, Request, State},
     response::{Html, IntoResponse},
     routing::{get, put},
     Json, Router,
@@ -131,11 +131,11 @@ async fn list_artifacts_handler(
 async fn upload_handler(
     Path(params): Path<storage::UploadParams>,
     State(state): State<SharedState>,
-    stream: Body,
+    body: Body,
 ) -> impl IntoResponse {
     let artifact_path = &state.read().await.artifact_path;
     let db = &state.read().await.db;
-    match storage::store_file(artifact_path, db, params, stream).await {
+    match storage::store_file(artifact_path, db, params, body).await {
         Ok(_) => (),
         Err(e) => {
             let response = SimpleResponse {
