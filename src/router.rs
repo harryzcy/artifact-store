@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     body::Body,
-    extract::{Path, Request, State},
+    extract::{Path, State},
     response::{Html, IntoResponse},
     routing::{get, put},
     Json, Router,

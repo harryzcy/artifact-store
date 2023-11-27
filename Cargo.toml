@@ -6,8 +6,7 @@ edition = "2021"
 license = "MIT"
 
 [dependencies]
-# axum = { version = "0.6.20", features = ["headers"] }
-axum = { git = "https://github.com/tokio-rs/axum", rev = "906f803" }
+axum = { version = "0.7.1" }
 futures-util = "0.3.29"
 hyper = { version = "1.0.0", features = ["full"] }
 # hyper-util = { version = "0.1.1", features = ["tokio", "server", "server-auto"], optional = true }
