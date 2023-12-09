@@ -1,6 +1,5 @@
-use axum::{extract::Request, response::Response, serve::IncomingStream};
-use std::{convert::Infallible, net::SocketAddr};
-use tokio::{net::TcpListener, signal};
+use std::net::SocketAddr;
+use tokio::net::TcpListener;
 use tracing::info;
 
 mod config;
