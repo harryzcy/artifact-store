@@ -21,6 +21,8 @@ use tracing::Level;
 use crate::storage;
 use crate::{database, error::HandleRequestError};
 
+const TIMEOUT_SECONDS: u64 = 10;
+
 type SharedState = Arc<RwLock<RouterState>>;
 
 pub struct RouterState {
@@ -52,7 +54,7 @@ pub fn router(data_path: String, artifact_path: String, db: database::Database) 
                         .level(Level::INFO)
                         .latency_unit(LatencyUnit::Micros),
                 ),
-            TimeoutLayer::new(Duration::from_secs(10)),
+            TimeoutLayer::new(Duration::from_secs(TIMEOUT_SECONDS)),
         ))
         .with_state(Arc::clone(&shared_state))
 }
