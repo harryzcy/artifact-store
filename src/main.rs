@@ -1,8 +1,10 @@
 use std::net::SocketAddr;
 
 use axum::extract::Request;
-use hyper::body::Incoming;
+use hyper::server::conn::http1;
+use hyper::{body::Incoming, service};
 use hyper_util::rt::TokioIo;
+use signal::unix::SignalKind;
 use tokio::{net::TcpListener, signal, sync::watch};
 use tower_service::Service;
 use tracing::{debug, info};
@@ -45,11 +47,11 @@ async fn main() {
         let close_rx = close_rx.clone();
         tokio::spawn(async move {
             let socket = TokioIo::new(socket);
-            let hyper_service = hyper::service::service_fn(move |request: Request<Incoming>| {
+            let hyper_service = service::service_fn(move |request: Request<Incoming>| {
                 tower_service.clone().call(request)
             });
 
-            let conn = hyper::server::conn::http1::Builder::new()
+            let conn = http1::Builder::new()
                 .serve_connection(socket, hyper_service)
                 .with_upgrades();
             let mut conn = std::pin::pin!(conn);
@@ -90,7 +92,7 @@ async fn shutdown_signal() {
 
     #[cfg(unix)]
     let terminate = async {
-        signal::unix::signal(signal::unix::SignalKind::terminate())
+        signal::unix::signal(SignalKind::terminate())
             .expect("failed to install signal handler")
             .recv()
             .await;
