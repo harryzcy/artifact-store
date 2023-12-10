@@ -39,15 +39,12 @@ async fn main() {
                 break;
             }
         };
-
         debug!("connection {remote_addr} accepted");
 
         let tower_service = app.clone();
         let close_rx = close_rx.clone();
-
         tokio::spawn(async move {
             let socket = TokioIo::new(socket);
-
             let hyper_service = hyper::service::service_fn(move |request: Request<Incoming>| {
                 tower_service.clone().call(request)
             });
@@ -55,7 +52,6 @@ async fn main() {
             let conn = hyper::server::conn::http1::Builder::new()
                 .serve_connection(socket, hyper_service)
                 .with_upgrades();
-
             let mut conn = std::pin::pin!(conn);
 
             loop {
@@ -74,7 +70,6 @@ async fn main() {
             }
 
             debug!("connection {remote_addr} closed");
-
             drop(close_rx);
         });
     }
