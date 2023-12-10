@@ -2,8 +2,13 @@ name: Build & Test
 
 on:
   push:
+    branches:
+      - "**"
+    tags-ignore:
+      - "v*"
   pull_request:
-    branches: [main]
+    branches:
+      - main
 
 env:
   CARGO_TERM_COLOR: always
