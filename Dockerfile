@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y libclang-dev
 RUN cargo build --release
 RUN mkdir /data
 
-FROM gcr.io/distroless/cc-debian12@sha256:4ddfea445cfeed54d6c9a1e51b97e7f3a5087f3a6a69cb430ebba3a89c402a41
+FROM gcr.io/distroless/cc-debian12@sha256:6714977f9f02632c31377650c15d89a7efaebf43bab0f37c712c30fc01edb973
 
 WORKDIR /app
 
