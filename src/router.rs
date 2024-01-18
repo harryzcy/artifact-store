@@ -40,6 +40,7 @@ pub fn router(data_path: String, artifact_path: String, db: database::Database) 
 
     Router::new()
         .route("/", get(index_handler))
+        .route("/robots.txt", get(robots_handler))
         .route("/ping", get(ping_handler))
         .route("/repositories", get(list_repos_handler))
         .route("/:server/:owner/:repo", get(list_commits_handler))
@@ -61,6 +62,10 @@ pub fn router(data_path: String, artifact_path: String, db: database::Database) 
 
 async fn index_handler() -> Html<&'static str> {
     Html("<h1>Artifact Store</h1>")
+}
+
+async fn robots_handler() -> &'static str {
+    "User-agent: *\nDisallow: /"
 }
 
 async fn ping_handler() -> &'static str {
@@ -209,6 +214,31 @@ mod tests {
         assert_eq!(&body[..], b"<h1>Artifact Store</h1>");
 
         std::fs::remove_dir_all("data/router/test_index_route").unwrap();
+    }
+
+    #[tokio::test]
+    async fn robots_route() {
+        let data_dir = String::from("data");
+        let artifact_path = String::from("data/artifacts");
+        let db = database::Database::new_rocksdb("data/router/test_robots_route").unwrap();
+        let app = router(data_dir, artifact_path, db);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/robots.txt")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        assert_eq!(&body[..], b"User-agent: *\nDisallow: /");
+
+        std::fs::remove_dir_all("data/router/test_robots_route").unwrap();
     }
 
     #[tokio::test]
