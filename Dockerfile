@@ -1,4 +1,4 @@
-FROM rust:1.74.1-bookworm@sha256:32d220ca8c77fe56afd6d057c382ea39aced503278526a34fc62b90946f92e02 AS builder
+FROM rust:1.75.0-bookworm@sha256:ac8c4cb82e317512260fbcf54e80039d9083605e3b8ea3b9fd4c39e1472c6215 AS builder
 
 WORKDIR /app
 
@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y libclang-dev
 RUN cargo build --release
 RUN mkdir /data
 
-FROM gcr.io/distroless/cc-debian12@sha256:4ddfea445cfeed54d6c9a1e51b97e7f3a5087f3a6a69cb430ebba3a89c402a41
+FROM gcr.io/distroless/cc-debian12@sha256:6714977f9f02632c31377650c15d89a7efaebf43bab0f37c712c30fc01edb973
 
 WORKDIR /app
 
