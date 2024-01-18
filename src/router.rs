@@ -217,6 +217,31 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn robots_route() {
+        let data_dir = String::from("data");
+        let artifact_path = String::from("data/artifacts");
+        let db = database::Database::new_rocksdb("data/router/test_robots_route").unwrap();
+        let app = router(data_dir, artifact_path, db);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/robots.txt")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        assert_eq!(&body[..], b"User-agent: *\nDisallow: /");
+
+        std::fs::remove_dir_all("data/router/test_robots_route").unwrap();
+    }
+
+    #[tokio::test]
     async fn ping_route() {
         let data_dir = String::from("data");
         let artifact_path = String::from("data/artifacts");
