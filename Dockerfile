@@ -18,4 +18,7 @@ COPY --from=builder /app/target/release/artifact-store ./
 USER nonroot:nonroot
 EXPOSE 3001
 
-CMD ["/app/artifact-store"]
+HEALTHCHECK --interval=60s --timeout=30s --start-period=5s --retries=3 \
+  CMD [ "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/ping", "||", "exit", "1" ]
+
+CMD [ "/app/artifact-store" ]
