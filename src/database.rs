@@ -486,9 +486,8 @@ fn extract_time(bytes: &[u8]) -> OffsetDateTime {
 
 #[cfg(test)]
 mod tests {
-    use std::time::{SystemTime, UNIX_EPOCH};
-
     use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn remove_db(path: &str) {
         let _ = std::fs::remove_dir_all(path);
