@@ -190,7 +190,6 @@ async fn download_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::body::Body;
     use axum::http::Request;
     use http_body_util::BodyExt;
     use tower::Service;
