@@ -8,5 +8,12 @@
   "labels": [
     "dependencies"
   ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "labels": [
+      "dependencies",
+      "skip-changelog"
+    ]
+  },
   "packageRules": []
 }
