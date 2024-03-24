@@ -27,7 +27,7 @@ async fn main() {
     info!(message = "starting server", port = addr.port());
 
     let listener = TcpListener::bind(&addr).await.unwrap();
-    let app = router::router(conf.data_path, conf.artifact_path, db);
+    let app = router::router(conf.artifact_path, db);
 
     let (close_tx, close_rx) = watch::channel(());
 

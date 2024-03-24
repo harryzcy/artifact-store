@@ -245,6 +245,16 @@ impl Database {
     }
 
     pub fn list_artifacts(&self, params: ListArtifactsParams) -> Result<Vec<ArtifactData>, Error> {
+        let exists_commit = self.exists_commit(ExistsCommitParams {
+            server: params.server,
+            owner: params.owner,
+            repo: params.repo,
+            commit: params.commit,
+        })?;
+        if !exists_commit {
+            return Err(Error::Generic("commit does not exist".to_string()));
+        }
+
         let key_prefix = serialize_key(vec!["artifact".as_bytes(), params.commit.as_bytes()]);
 
         self.get_by_prefix(
