@@ -751,7 +751,18 @@ mod tests {
     fn test_list_artifacts() {
         let db = Database::new_rocksdb("data/test_list_artifacts").unwrap();
         let tx = db.transaction();
+
         let time_milliseconds = 1234567890 * NANOSECONDS_PER_SECOND as u128;
+
+        let params = CreateCommitParams {
+            server: &"github.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo".to_string(),
+            commit: &"1234567890abcdef".to_string(),
+        };
+        tx.create_commit_if_not_exists(time_milliseconds, params)
+            .unwrap();
+
         let params = CreateArtifactParams {
             commit: &"1234567890abcdef".to_string(),
             path: &"path/to/artifact".to_string(),
@@ -779,6 +790,28 @@ mod tests {
         let db = Database::new_rocksdb("data/test_list_artifacts_multiple").unwrap();
         let tx = db.transaction();
         let time_milliseconds = 1234567890 * 1000;
+
+        tx.create_commit_if_not_exists(
+            time_milliseconds,
+            CreateCommitParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+                commit: &"commit-1".to_string(),
+            },
+        )
+        .unwrap();
+        tx.create_commit_if_not_exists(
+            time_milliseconds,
+            CreateCommitParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+                commit: &"commit-2".to_string(),
+            },
+        )
+        .unwrap();
+
         let params1 = CreateArtifactParams {
             commit: &"commit-1".to_string(),
             path: &"path/to/artifact-1".to_string(),
@@ -824,7 +857,7 @@ mod tests {
 
     #[test]
     fn test_list_artifacts_invalid_commit() {
-        let db = Database::new_rocksdb("data/test_list_artifacts").unwrap();
+        let db = Database::new_rocksdb("data/test_list_artifacts_invalid_commit").unwrap();
         let tx = db.transaction();
         let time_milliseconds = 1234567890 * NANOSECONDS_PER_SECOND as u128;
         let params = CreateArtifactParams {
