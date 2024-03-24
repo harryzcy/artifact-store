@@ -3,7 +3,7 @@ use std::env::var;
 pub struct Config {
     /// The path to the rocksdb database, default to $DATA_PATH/rocksdb.
     pub rocksdb_path: String,
-    /// The path to the artifacts directory, default to $data_path/artifacts.
+    /// The path to the artifacts directory, default to $DATA_PATH/artifacts.
     pub artifact_path: String,
 }
 
