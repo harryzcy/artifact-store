@@ -61,7 +61,7 @@ pub struct ListArtifactsParams<'a> {
     pub commit: &'a String,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct ArtifactData {
     pub path: String,
@@ -134,7 +134,6 @@ impl Database {
             |key, value| {
                 // parts: ["repo", server, owner, repo]
                 let key_parts = deserialize_key(key);
-                // let server = std::str::from_utf8(&key_parts[1]).unwrap();
                 let server = std::str::from_utf8(&key_parts[1]).unwrap();
                 let owner = std::str::from_utf8(&key_parts[2]).unwrap();
                 let repo = std::str::from_utf8(&key_parts[3]).unwrap();
@@ -252,7 +251,10 @@ impl Database {
             commit: params.commit,
         })?;
         if !exists_commit {
-            return Err(Error::Generic("commit does not exist".to_string()));
+            return Err(Error::Generic(format!(
+                "commit does not exist: {}",
+                params.commit
+            )));
         }
 
         let key_prefix = serialize_key(vec!["artifact".as_bytes(), params.commit.as_bytes()]);
@@ -818,6 +820,31 @@ mod tests {
         assert_eq!(artifacts_commit_2[0].path, "path/to/artifact-3");
 
         remove_db("data/test_list_artifacts_multiple");
+    }
+
+    #[test]
+    fn test_list_artifacts_invalid_commit() {
+        let db = Database::new_rocksdb("data/test_list_artifacts").unwrap();
+        let tx = db.transaction();
+        let time_milliseconds = 1234567890 * NANOSECONDS_PER_SECOND as u128;
+        let params = CreateArtifactParams {
+            commit: &"1234567890abcdef".to_string(),
+            path: &"path/to/artifact".to_string(),
+        };
+        tx.create_artifact(time_milliseconds, params).unwrap();
+        tx.commit().unwrap();
+
+        let err = db
+            .list_artifacts(ListArtifactsParams {
+                server: &"github.com".to_string(),
+                owner: &"does-not-exist".to_string(),
+                repo: &"does-not-exist".to_string(),
+                commit: &"1234567890abcdef".to_string(),
+            })
+            .unwrap_err();
+        assert!(matches!(err, Error::Generic(_)));
+
+        remove_db("data/test_list_artifacts_invalid_commit");
     }
 
     #[test]
