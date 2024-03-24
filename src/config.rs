@@ -1,11 +1,9 @@
 use std::env::var;
 
 pub struct Config {
-    /// The base directory where all data is stored.
-    pub data_path: String,
-    /// The path to the rocksdb database, default to $data_path/rocksdb.
+    /// The path to the rocksdb database, default to $DATA_PATH/rocksdb.
     pub rocksdb_path: String,
-    /// The path to the artifacts directory, default to $data_path/artifacts.
+    /// The path to the artifacts directory, default to $DATA_PATH/artifacts.
     pub artifact_path: String,
 }
 
@@ -24,7 +22,6 @@ pub fn load() -> Config {
     };
 
     Config {
-        data_path,
         rocksdb_path,
         artifact_path,
     }
@@ -42,7 +39,6 @@ mod tests {
             remove_var("ROCKSDB_PATH");
             remove_var("ARTIFACTS_PATH");
             let config = load();
-            assert_eq!(config.data_path, "/data");
             assert_eq!(config.rocksdb_path, "/data/rocksdb");
             assert_eq!(config.artifact_path, "/data/artifacts");
         }
@@ -52,7 +48,6 @@ mod tests {
             remove_var("ROCKSDB_PATH");
             remove_var("ARTIFACTS_PATH");
             let config = load();
-            assert_eq!(config.data_path, "/data");
             assert_eq!(config.rocksdb_path, "/data/rocksdb");
             assert_eq!(config.artifact_path, "/data/artifacts");
         }
@@ -62,7 +57,6 @@ mod tests {
             set_var("ROCKSDB_PATH", "/etc/rocksdb");
             remove_var("ARTIFACTS_PATH");
             let config = load();
-            assert_eq!(config.data_path, "/data");
             assert_eq!(config.rocksdb_path, "/etc/rocksdb");
             assert_eq!(config.artifact_path, "/data/artifacts");
         }
@@ -72,7 +66,6 @@ mod tests {
             remove_var("ROCKSDB_PATH");
             set_var("ARTIFACTS_PATH", "/etc/artifacts");
             let config = load();
-            assert_eq!(config.data_path, "/data");
             assert_eq!(config.rocksdb_path, "/data/rocksdb");
             assert_eq!(config.artifact_path, "/etc/artifacts");
         }
@@ -82,7 +75,6 @@ mod tests {
             set_var("ROCKSDB_PATH", "/etc/rocksdb");
             set_var("ARTIFACTS_PATH", "/etc/artifacts");
             let config = load();
-            assert_eq!(config.data_path, "/data");
             assert_eq!(config.rocksdb_path, "/etc/rocksdb");
             assert_eq!(config.artifact_path, "/etc/artifacts");
         }
