@@ -33,6 +33,8 @@ jobs:
 
       - name: Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
+        env:
+          CARGO_INCREMENTAL: "0"
 
   rust-machete:
     name: Rust Machete

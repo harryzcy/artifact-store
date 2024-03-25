@@ -5,7 +5,7 @@ WORKDIR /app
 COPY ./ .
 
 RUN apt-get update && apt-get install -y libclang-dev
-RUN cargo build --release
+RUN CARGO_INCREMENTAL=0 cargo build --release
 RUN mkdir /data
 
 FROM busybox:1.36.1-glibc@sha256:8425131865cec8fba4d2db137c883902155e0d58fcbb301690693161cc903910 as tools
