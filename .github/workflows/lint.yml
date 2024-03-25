@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Set up Rust
         run: rustup update nightly && rustup default nightly
@@ -33,6 +33,16 @@ jobs:
 
       - name: Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
+
+  rust-machete:
+    name: Rust Machete
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Machete
+        uses: bnjbvr/cargo-machete@0bc8104fae5b4990eca23e070b9e67521f44c0e5 # v0.6.2
 
   spelling:
     name: Spelling
