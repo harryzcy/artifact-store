@@ -1,4 +1,4 @@
-FROM rust:1.77.2-bookworm@sha256:5fbf82e820eee97bf4d4b2db0146adf8318f072e4c3e36c1f4d95682fd8f5cfa AS builder
+FROM rust:1.77.2-bookworm@sha256:e0fd84e23bed2474fef23fdbb7b5845c8331e3fa1a20d255e25a0ee25e58ef01 AS builder
 
 WORKDIR /app
 
