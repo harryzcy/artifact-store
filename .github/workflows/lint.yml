@@ -44,7 +44,7 @@ jobs:
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Machete
-        uses: bnjbvr/cargo-machete@0bc8104fae5b4990eca23e070b9e67521f44c0e5 # v0.6.2
+        uses: bnjbvr/cargo-machete@37beb07f344ff2d3a6a048b13b97fc747cb82f5d # v0.7.0
 
   spelling:
     name: Spelling
