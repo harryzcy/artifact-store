@@ -2,7 +2,7 @@
 name = "artifact-store"
 version = "0.7.1"
 repository = "https://github.com/harryzcy/artifact-store"
-edition = "2021"
+edition = "2024"
 license = "MIT"
 
 [dependencies]
