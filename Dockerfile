@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y libclang-dev
 RUN CARGO_INCREMENTAL=0 cargo build --release
 RUN mkdir /data
 
-FROM busybox:1.36.1-glibc@sha256:949757861bcee7514f64d9b44d3c1d43c21f5183cae113e97b98261fc1c522dc as tools
+FROM busybox:1.36.1-glibc@sha256:ebc6796a3eeca8489685eeb1f35223bc2268eed81c23c1c11c2a5713dfaa9910 as tools
 
 FROM gcr.io/distroless/cc-debian12@sha256:3310655aac0d85eb9d579792387af1ff3eb7a1667823478be58020ab0e0d97a8
 
