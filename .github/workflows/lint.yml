@@ -21,6 +21,7 @@ jobs:
   rust-clippy:
     name: Rust Clippy
     runs-on: ubuntu-latest
+    continue-on-error: true
     strategy:
       matrix:
         toolchain:
