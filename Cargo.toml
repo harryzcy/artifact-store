@@ -7,7 +7,7 @@ license = "MIT"
 
 [dependencies]
 axum = { version = "=0.7.7" }
-futures-util = "=0.3.30"
+futures-util = "=0.3.31"
 hyper = { version = "=1.4.1", features = ["full"] }
 hyper-util = { version = "=0.1.9", features = [
   "tokio",
