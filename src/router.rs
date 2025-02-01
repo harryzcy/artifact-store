@@ -38,10 +38,19 @@ pub fn router(artifact_path: String, db: database::Database) -> Router {
         .route("/robots.txt", get(robots_handler))
         .route("/ping", get(ping_handler))
         .route("/repositories", get(list_repos_handler))
-        .route("/:server/:owner/:repo", get(list_commits_handler))
-        .route("/:server/:owner/:repo/:commit", get(list_artifacts_handler))
-        .route("/:server/:owner/:repo/:commit/*path", put(upload_handler))
-        .route("/:server/:owner/:repo/:commit/*path", get(download_handler))
+        .route("/{server}/{owner}/{repo}", get(list_commits_handler))
+        .route(
+            "/{server}/{owner}/{repo}/{commit}",
+            get(list_artifacts_handler),
+        )
+        .route(
+            "/{server}/{owner}/{repo}/{commit}/{*path}",
+            put(upload_handler),
+        )
+        .route(
+            "/{server}/{owner}/{repo}/{commit}/{*path}",
+            get(download_handler),
+        )
         .layer((
             TraceLayer::new_for_http()
                 .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
