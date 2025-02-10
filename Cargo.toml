@@ -29,7 +29,7 @@ tracing-subscriber = { version = "=0.3.19", features = ["json"] }
 bytes = "=1.10.0"
 http = "=1.1.0"
 http-body = "=1.0.1"
-http-body-util = "=0.1.1"
+http-body-util = "=0.1.2"
 tower = "=0.5.2"
 
 [profile.release]
