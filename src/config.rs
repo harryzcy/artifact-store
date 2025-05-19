@@ -14,11 +14,11 @@ pub fn load() -> Config {
     };
     let rocksdb_path = match var("ROCKSDB_PATH") {
         Ok(dir) => dir,
-        Err(_) => format!("{}/rocksdb", data_path).to_string(),
+        Err(_) => format!("{data_path}/rocksdb").to_string(),
     };
     let artifact_path = match var("ARTIFACTS_PATH") {
         Ok(dir) => dir,
-        Err(_) => format!("{}/artifacts", data_path).to_string(),
+        Err(_) => format!("{data_path}/artifacts").to_string(),
     };
 
     Config {
