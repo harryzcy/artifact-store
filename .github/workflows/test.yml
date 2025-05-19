@@ -27,8 +27,12 @@ jobs:
           - beta
           - nightly
         runner:
-          - ubuntu-latest
+          - ubuntu-24.04
         include:
+          - toolchain: stable
+            runner: ubuntu-22.04
+          - toolchain: stable
+            runner: ubuntu-22.04-arm
           - toolchain: stable
             runner: ubuntu-24.04-arm
     steps:
