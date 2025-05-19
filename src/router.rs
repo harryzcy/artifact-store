@@ -2,19 +2,19 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::{
+    Json, Router,
     body::Body,
     extract::{Path, State},
     response::{Html, IntoResponse},
     routing::{get, put},
-    Json, Router,
 };
-use hyper::{header, StatusCode};
+use hyper::{StatusCode, header};
 use serde::Serialize;
 use tokio::sync::RwLock;
 use tower_http::timeout::TimeoutLayer;
 use tower_http::{
-    trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
     LatencyUnit,
+    trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
 };
 use tracing::Level;
 
@@ -89,7 +89,7 @@ async fn list_repos_handler(State(state): State<SharedState>) -> impl IntoRespon
         Err(e) => {
             let response = SimpleResponse {
                 code: 500,
-                message: format!("{}", e),
+                message: format!("{e}"),
             };
             return serde_json::to_string(&response).unwrap();
         }
@@ -108,7 +108,7 @@ async fn list_commits_handler(
         Err(e) => {
             let response = SimpleResponse {
                 code: 500,
-                message: format!("{}", e),
+                message: format!("{e}"),
             };
             return serde_json::to_string(&response).unwrap();
         }
@@ -132,7 +132,7 @@ async fn list_artifacts_handler(
             _ => {
                 let response = SimpleResponse {
                     code: 500,
-                    message: format!("{}", e),
+                    message: format!("{e}"),
                 };
                 return serde_json::to_string(&response).unwrap();
             }
@@ -154,7 +154,7 @@ async fn upload_handler(
         Err(e) => {
             let response = SimpleResponse {
                 code: 500,
-                message: format!("{}", e),
+                message: format!("{e}"),
             };
             return Json(response);
         }
@@ -177,15 +177,15 @@ async fn download_handler(
         Ok(result) => result,
         Err(e) => match e {
             HandleRequestError::NotFound(message) => {
-                return Err((StatusCode::NOT_FOUND, message.to_string()))
+                return Err((StatusCode::NOT_FOUND, message.to_string()));
             }
-            _ => return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e))),
+            _ => return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("{e}"))),
         },
     };
 
     let headers = [(
         header::CONTENT_DISPOSITION,
-        format!("attachment; filename=\"{}\"", filename),
+        format!("attachment; filename=\"{filename}\""),
     )];
 
     Ok((headers, body))
