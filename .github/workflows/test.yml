@@ -19,7 +19,7 @@ env:
 jobs:
   rust:
     name: Cargo
-    runs-on: ubuntu-latest
+    runs-on: [ubuntu-latest, ubuntu-24.04-arm]
     strategy:
       matrix:
         toolchain:
