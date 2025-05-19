@@ -15,12 +15,12 @@ pub enum HandleRequestError {
 impl fmt::Display for HandleRequestError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            HandleRequestError::IoError(e) => write!(f, "IO error: {}", e),
-            HandleRequestError::SystemTimeError(e) => write!(f, "SystemTime error: {}", e),
-            HandleRequestError::AxumError(e) => write!(f, "Axum error: {}", e),
-            HandleRequestError::RocksDBError(e) => write!(f, "RocksDB error: {}", e),
-            HandleRequestError::Generic(s) => write!(f, "Generic error: {}", s),
-            HandleRequestError::NotFound(s) => write!(f, "{}", s),
+            HandleRequestError::IoError(e) => write!(f, "IO error: {e}"),
+            HandleRequestError::SystemTimeError(e) => write!(f, "SystemTime error: {e}"),
+            HandleRequestError::AxumError(e) => write!(f, "Axum error: {e}"),
+            HandleRequestError::RocksDBError(e) => write!(f, "RocksDB error: {e}"),
+            HandleRequestError::Generic(s) => write!(f, "Generic error: {s}"),
+            HandleRequestError::NotFound(s) => write!(f, "{s}"),
         }
     }
 }
