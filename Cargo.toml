@@ -9,7 +9,7 @@ license = "MIT"
 axum = { version = "=0.8.4" }
 futures-util = "=0.3.31"
 hyper = { version = "=1.6.0", features = ["full"] }
-hyper-util = { version = "=0.1.11", features = [
+hyper-util = { version = "=0.1.12", features = [
   "tokio",
   "server-auto",
   "http1",
