@@ -10,7 +10,7 @@ RUN mkdir /data
 
 FROM busybox:1.37.0@sha256:f9a104fddb33220ec80fc45a4e606c74aadf1ef7a3832eb0b05be9e90cd61f5f AS tools
 
-FROM gcr.io/distroless/cc-debian12@sha256:eccec5274132c1be0ce5d2c8e6fe41033e64af5e987ccee9007826e4c012069d
+FROM gcr.io/distroless/cc-debian12@sha256:aa435f48941dbbd18b4a1f3f71992a3afddc6fb913beb411cd4c0fb174e0bfb8
 
 WORKDIR /app
 
