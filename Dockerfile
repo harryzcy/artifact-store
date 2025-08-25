@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY ./ .
 
-RUN apt-get update && apt-get install -y libclang-dev
+RUN apt-get update && apt-get install --no-install-recommends -y libclang-dev
 RUN CARGO_INCREMENTAL=0 cargo build --release
 RUN mkdir /data
 
