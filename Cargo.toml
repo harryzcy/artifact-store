@@ -6,7 +6,7 @@ edition = "2024"
 license = "MIT"
 
 [dependencies]
-axum = { version = "=0.8.6" }
+axum = { version = "=0.8.7" }
 futures-util = "=0.3.31"
 hyper = { version = "=1.8.1", features = ["full"] }
 hyper-util = { version = "=0.1.18", features = [
