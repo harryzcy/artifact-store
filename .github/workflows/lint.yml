@@ -26,7 +26,9 @@ jobs:
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
       - name: Set up Rust
-        run: rustup update stable && rustup default stable
+        run: |
+          rustup update stable && rustup default stable
+          rustup component add rustfmt
 
       - name: Rustfmt
         run: cargo fmt --all -- --check
