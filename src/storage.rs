@@ -221,7 +221,7 @@ pub async fn prepare_download_file(
             return Err(HandleRequestError::NotFound(format!(
                 "file {} not found",
                 params.path
-            )))
+            )));
         }
     };
     let stream: ReaderStream<File> = ReaderStream::new(file);

@@ -59,7 +59,10 @@ pub fn router(artifact_path: String, db: database::Database) -> Router {
                         .level(Level::INFO)
                         .latency_unit(LatencyUnit::Micros),
                 ),
-            TimeoutLayer::new(Duration::from_secs(TIMEOUT_SECONDS)),
+            TimeoutLayer::with_status_code(
+                StatusCode::REQUEST_TIMEOUT,
+                Duration::from_secs(TIMEOUT_SECONDS),
+            ),
         ))
         .with_state(Arc::clone(&shared_state))
 }
