@@ -28,9 +28,11 @@ jobs:
       - name: Set up Rust
         run: |
           rustup update stable && rustup default stable
-          rustup component add rustfmt
+      
+      - name: Install rustfmt
+        run: rustup component add rustfmt
 
-      - name: Rustfmt
+      - name: Run rustfmt
         run: cargo fmt --all -- --check
 
   rust-clippy:
