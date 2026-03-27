@@ -16,7 +16,7 @@ permissions:
 jobs:
   super-linter:
     name: Super Linter
-    uses: harryzcy/github-actions/.github/workflows/linter.yml@454561de2c2e5938ee91113753d92166a5dba935 # main
+    uses: harryzcy/github-actions/.github/workflows/linter.yml@355b25afbdb2540d1436dc0858d8954b6194ee6d # main
 
   rust-fmt:
     name: Rust Format
@@ -71,4 +71,4 @@ jobs:
 
   spelling:
     name: Spelling
-    uses: harryzcy/github-actions/.github/workflows/spelling.yml@454561de2c2e5938ee91113753d92166a5dba935 # main
+    uses: harryzcy/github-actions/.github/workflows/spelling.yml@355b25afbdb2540d1436dc0858d8954b6194ee6d # main
