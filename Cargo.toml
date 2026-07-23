@@ -16,7 +16,7 @@ hyper-util = { version = "=0.1.20", features = [
 ] }
 rocksdb = { version = "=0.24.0", features = ["multi-threaded-cf"] }
 serde = { version = "=1.0.229", features = ["derive"] }
-serde_json = "=1.0.150"
+serde_json = "=1.0.151"
 time = { version = "=0.3.53", features = ["serde", "formatting"] }
 tokio = { version = "=1.53.0", features = ["full"] }
 tokio-util = { version = "=0.7.18", features = ["io"] }
