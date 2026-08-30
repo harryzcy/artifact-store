@@ -17,7 +17,7 @@ jobs:
 
   release-docker:
     name: Release Docker image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
       packages: write
