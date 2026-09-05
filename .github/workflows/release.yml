@@ -13,7 +13,7 @@ jobs:
     name: Release on GitHub
     permissions:
       contents: write
-    uses: harryzcy/github-actions/.github/workflows/release.yml@13a4c40f9699ea2915746978b58bb42160f771b6 # main
+    uses: harryzcy/github-actions/.github/workflows/release.yml@8b5eecdfeccfc9598d7d5ffd0139afbf302b68e6 # main
 
   release-docker:
     name: Release Docker image
@@ -38,7 +38,7 @@ jobs:
             type=sha
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
