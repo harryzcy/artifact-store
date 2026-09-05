@@ -2,6 +2,8 @@
 
 All database keys starts with a constant string defining its namespace. There are currently four different namespaces, `repo`, `commit`, `commit_time`, `artifact`, used for powering four different kind of APIs.
 
+Key components are joined by `#`. Any `#` or `\` inside a component is escaped with a leading `\`, so the separator stays unambiguous. The one exception is a trailing fixed-width binary component, which is written verbatim: its width is known up front, so it needs no escaping, and inserting escape bytes would shift the byte-wise comparison RocksDB uses to order keys.
+
 ## `repo`
 
 It's used for querying all repositories stored.
@@ -22,7 +24,7 @@ Value:
 
 It's storing all commits ordered by the timestamp that commit is added.
 
-Key: `commit_time#{server}#{owner}#{repo}#{time}`
+Key: `commit_time#{server}#{owner}#{repo}#{time}`, where `{time}` is the 16-byte big-endian `u128` nanosecond timestamp, stored unescaped so that RocksDB's byte order matches chronological order
 Value:
     - commit: commit hash
 
