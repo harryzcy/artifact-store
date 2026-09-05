@@ -5,6 +5,9 @@ type TransactionDB = rocksdb::OptimisticTransactionDB;
 
 const NANOSECONDS_PER_SECOND: i64 = 1_000_000_000;
 
+/// Width of the big-endian `u128` timestamp ending a `commit_time` key.
+const TIME_KEY_WIDTH: usize = size_of::<u128>();
+
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RepoData {
@@ -180,11 +183,7 @@ impl Database {
             key_prefix,
             |key, value| {
                 // parts: ["commit_time", server, owner, repo, time]
-                let key_parts = deserialize_key(key);
-                let time_part = key_parts.last().unwrap();
-
-                // time_part is expected to be a u128
-                let time = extract_time(time_part);
+                let time = extract_time(binary_suffix(key, TIME_KEY_WIDTH));
 
                 let value_str = std::str::from_utf8(value).unwrap();
                 let value = serde_json::from_str::<CommitTimeValue>(value_str).unwrap();
@@ -369,13 +368,15 @@ impl Transaction<'_> {
         ]);
         let commit_value = CommitValue { time_added: time };
 
-        let commit_time_key = serialize_key(vec![
-            "commit_time".as_bytes(),
-            params.server.as_bytes(),
-            params.owner.as_bytes(),
-            params.repo.as_bytes(),
+        let commit_time_key = serialize_key_with_binary_suffix(
+            vec![
+                "commit_time".as_bytes(),
+                params.server.as_bytes(),
+                params.owner.as_bytes(),
+                params.repo.as_bytes(),
+            ],
             &time.to_be_bytes(),
-        ]);
+        );
         let commit_time_value = CommitTimeValue {
             commit: params.commit.clone(),
         };
@@ -467,6 +468,20 @@ fn serialize_key(parts: Vec<&[u8]>) -> Vec<u8> {
         }
     }
     result
+}
+
+/// Serializes a key ending with a fixed-width binary component, appended
+/// unescaped so that byte order still matches numeric order.
+fn serialize_key_with_binary_suffix(parts: Vec<&[u8]>, suffix: &[u8]) -> Vec<u8> {
+    let mut result = serialize_key(parts);
+    result.push(b'#');
+    result.extend_from_slice(suffix);
+    result
+}
+
+/// Returns the trailing `width` bytes of such a key.
+fn binary_suffix(key: &[u8], width: usize) -> &[u8] {
+    &key[key.len() - width..]
 }
 
 fn deserialize_key(key: &[u8]) -> Vec<Vec<u8>> {
@@ -579,16 +594,48 @@ mod tests {
             .unwrap()
             .as_nanos();
 
-        let bytes = serialize_key(vec![&time.to_be_bytes()]);
-        let deserialized = deserialize_key(&bytes);
-        assert_eq!(deserialized.len(), 1);
-        assert_eq!(deserialized[0], time.to_be_bytes());
+        let key = serialize_key_with_binary_suffix(commit_time_prefix(), &time.to_be_bytes());
 
-        let extracted = extract_time(deserialized.last().unwrap());
+        let extracted = extract_time(binary_suffix(&key, TIME_KEY_WIDTH));
         assert_eq!(
             time as i64 / NANOSECONDS_PER_SECOND,
             extracted.unix_timestamp()
         );
+    }
+
+    fn commit_time_prefix() -> Vec<&'static [u8]> {
+        vec![
+            "commit_time".as_bytes(),
+            "github.com".as_bytes(),
+            "owner".as_bytes(),
+            "repo".as_bytes(),
+        ]
+    }
+
+    // These end in 0x5c 0x80 0x23 and 0x5c 0x80 0x24, so escaping flips their order.
+    const OLDER_NANOS: u128 = 1_757_000_000_000_000_035;
+    const NEWER_NANOS: u128 = 1_757_000_000_000_000_036;
+
+    #[test]
+    fn test_key_binary_suffix_is_not_escaped() {
+        let key =
+            serialize_key_with_binary_suffix(commit_time_prefix(), &OLDER_NANOS.to_be_bytes());
+
+        let prefix = serialize_key(commit_time_prefix());
+        assert_eq!(key.len(), prefix.len() + 1 + TIME_KEY_WIDTH);
+        assert_eq!(
+            binary_suffix(&key, TIME_KEY_WIDTH),
+            OLDER_NANOS.to_be_bytes()
+        );
+    }
+
+    #[test]
+    fn test_commit_time_key_order_matches_time_order() {
+        let older =
+            serialize_key_with_binary_suffix(commit_time_prefix(), &OLDER_NANOS.to_be_bytes());
+        let newer =
+            serialize_key_with_binary_suffix(commit_time_prefix(), &NEWER_NANOS.to_be_bytes());
+        assert!(older < newer);
     }
 
     #[test]
@@ -716,6 +763,42 @@ mod tests {
     }
 
     #[test]
+    fn test_list_commits_order_with_escapable_time() {
+        let db = Database::new_rocksdb("data/test_list_commits_escapable_time").unwrap();
+        let tx = db.transaction();
+        for (commit, time) in [("commit-older", OLDER_NANOS), ("commit-newer", NEWER_NANOS)] {
+            tx.create_commit_if_not_exists(
+                time,
+                CreateCommitParams {
+                    commit: &commit.to_string(),
+                    server: &"github.com".to_string(),
+                    owner: &"owner".to_string(),
+                    repo: &"repo".to_string(),
+                },
+            )
+            .unwrap();
+        }
+        tx.commit().unwrap();
+
+        let commits = db
+            .list_repo_commits(ListRepoCommitsParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+            })
+            .unwrap();
+        assert_eq!(commits.len(), 2);
+        assert_eq!(commits[0].commit, "commit-newer");
+        assert_eq!(commits[1].commit, "commit-older");
+        assert_eq!(
+            commits[0].time_added.unix_timestamp_nanos(),
+            (NEWER_NANOS / NANOSECONDS_PER_SECOND as u128 * NANOSECONDS_PER_SECOND as u128) as i128
+        );
+
+        remove_db("data/test_list_commits_escapable_time");
+    }
+
+    #[test]
     fn test_get_latest_commit() {
         let db = Database::new_rocksdb("data/test_get_latest_commit").unwrap();
         let tx = db.transaction();
@@ -745,6 +828,36 @@ mod tests {
         assert_eq!(commit, "commit-2");
 
         remove_db("data/test_get_latest_commit");
+    }
+
+    #[test]
+    fn test_get_latest_commit_with_escapable_time() {
+        let db = Database::new_rocksdb("data/test_get_latest_commit_escapable_time").unwrap();
+        let tx = db.transaction();
+        for (commit, time) in [("commit-older", OLDER_NANOS), ("commit-newer", NEWER_NANOS)] {
+            tx.create_commit_if_not_exists(
+                time,
+                CreateCommitParams {
+                    commit: &commit.to_string(),
+                    server: &"github.com".to_string(),
+                    owner: &"owner".to_string(),
+                    repo: &"repo".to_string(),
+                },
+            )
+            .unwrap();
+        }
+        tx.commit().unwrap();
+
+        let commit = db
+            .get_latest_commit(GetLatestCommitParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+            })
+            .unwrap();
+        assert_eq!(commit, "commit-newer");
+
+        remove_db("data/test_get_latest_commit_escapable_time");
     }
 
     #[test]
