@@ -396,6 +396,48 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn download_latest_no_commits() {
+        let artifact_path = String::from("data/artifacts");
+        let db =
+            database::Database::new_rocksdb("data/router/test_download_latest_no_commits").unwrap();
+        let mut app = router(artifact_path, db);
+
+        let response = send_request(
+            &mut app,
+            "PUT",
+            "/git.example.dev/owner/repo/commit/dir/test_download_latest_no_commits.txt",
+            Body::from("test_download_latest_no_commits"),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // A repo with no commits, sorting before the one that does have commits.
+        let response = send_request(
+            &mut app,
+            "GET",
+            "/git.example.dev/owner/other-repo/@latest/dir/test_download_latest_no_commits.txt",
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        let response = send_request(
+            &mut app,
+            "GET",
+            "/git.example.dev/owner/other-repo/@latest",
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let value: serde_json::Value = serde_json::from_slice(&body[..]).unwrap();
+        assert_eq!(value["code"], 404);
+
+        std::fs::remove_dir_all("data/router/test_download_latest_no_commits").unwrap();
+    }
+
+    #[tokio::test]
     async fn download_not_exist() {
         let artifact_path = String::from("data/artifacts");
         let db = database::Database::new_rocksdb("data/router/test_download_not_exist").unwrap();
