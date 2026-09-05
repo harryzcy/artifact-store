@@ -197,25 +197,36 @@ impl Database {
     }
 
     pub fn get_latest_commit(&self, params: GetLatestCommitParams) -> Result<String, Error> {
-        let mut search_key = serialize_key(vec![
+        let key_prefix = serialize_key(vec![
             "commit_time".as_bytes(),
             params.server.as_bytes(),
             params.owner.as_bytes(),
             params.repo.as_bytes(),
         ]);
+
+        // Include the separator so a repo whose name merely extends this one can't match.
+        let mut key_start = key_prefix.clone();
+        key_start.push(b'#');
+
+        let mut search_key = key_prefix;
         search_key.push(b'$');
 
         match self {
             Database::RocksDB(db) => {
                 let mut iter = db.raw_iterator();
                 iter.seek_for_prev(&search_key);
-                if iter.valid() {
+                // The reverse seek lands on the greatest key <= search_key, which belongs to
+                // another repo or namespace when this repo has no commits.
+                if iter.valid()
+                    && let Some(raw_key) = iter.key()
+                    && raw_key.starts_with(&key_start)
+                {
                     let value_raw = iter.value().unwrap();
                     let value_str = std::str::from_utf8(value_raw).unwrap();
                     let value = serde_json::from_str::<CommitTimeValue>(value_str).unwrap();
                     return Ok(value.commit);
                 }
-                Err(Error::Generic("no commits found".to_string()))
+                Err(Error::NotFound("no commits found".to_string()))
             }
         }
     }
@@ -439,6 +450,7 @@ impl Transaction<'_> {
 pub enum Error {
     RocksDB(rocksdb::Error),
     Generic(String),
+    NotFound(String),
 }
 
 impl From<rocksdb::Error> for Error {
@@ -858,6 +870,60 @@ mod tests {
         assert_eq!(commit, "commit-newer");
 
         remove_db("data/test_get_latest_commit_escapable_time");
+    }
+
+    #[test]
+    fn test_get_latest_commit_no_commits() {
+        let db = Database::new_rocksdb("data/test_get_latest_commit_no_commits").unwrap();
+        let tx = db.transaction();
+        let params = CreateCommitParams {
+            commit: &"commit-1".to_string(),
+            server: &"github.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo".to_string(),
+        };
+        tx.create_commit_if_not_exists(1234567890, params).unwrap();
+        tx.commit().unwrap();
+
+        // "other-repo" sorts before "repo", so the reverse seek lands on a key from
+        // another namespace unless the prefix is checked.
+        let err = db
+            .get_latest_commit(GetLatestCommitParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"other-repo".to_string(),
+            })
+            .unwrap_err();
+        assert!(matches!(err, Error::NotFound(_)));
+
+        remove_db("data/test_get_latest_commit_no_commits");
+    }
+
+    #[test]
+    fn test_get_latest_commit_no_commits_sibling_repo() {
+        let db = Database::new_rocksdb("data/test_get_latest_commit_sibling").unwrap();
+        let tx = db.transaction();
+        let params = CreateCommitParams {
+            commit: &"commit-1".to_string(),
+            server: &"github.com".to_string(),
+            owner: &"owner".to_string(),
+            repo: &"repo!".to_string(),
+        };
+        tx.create_commit_if_not_exists(1234567890, params).unwrap();
+        tx.commit().unwrap();
+
+        // "repo!" extends "repo" with a byte below the '$' end marker, so its key both
+        // sorts before the seek target and shares the un-separated prefix.
+        let err = db
+            .get_latest_commit(GetLatestCommitParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+            })
+            .unwrap_err();
+        assert!(matches!(err, Error::NotFound(_)));
+
+        remove_db("data/test_get_latest_commit_sibling");
     }
 
     #[test]

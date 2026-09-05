@@ -66,6 +66,7 @@ impl From<database::Error> for HandleRequestError {
         match e {
             database::Error::RocksDB(e) => Self::RocksDBError(e),
             database::Error::Generic(s) => Self::Generic(s),
+            database::Error::NotFound(s) => Self::NotFound(s),
         }
     }
 }
