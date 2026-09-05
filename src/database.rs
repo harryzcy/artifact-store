@@ -300,7 +300,7 @@ impl Database {
         let mut key_start = key_prefix.clone();
         key_start.push(b'#');
 
-        let mut key_end = key_prefix.clone();
+        let mut key_end = key_prefix;
         key_end.push(b'$');
 
         let mut result: Vec<T> = Vec::new();
@@ -315,7 +315,9 @@ impl Database {
                 }
                 while iter.valid() {
                     let raw_key = iter.key().unwrap();
-                    if !raw_key.starts_with(&key_prefix) {
+                    // Match through the separator, so the scan stops at the end of this
+                    // range instead of running on into a longer sibling's keys.
+                    if !raw_key.starts_with(&key_start) {
                         break;
                     }
                     let raw_value = iter.value().unwrap();
@@ -811,6 +813,39 @@ mod tests {
     }
 
     #[test]
+    fn test_list_commits_ignores_sibling_repo() {
+        let db = Database::new_rocksdb("data/test_list_commits_sibling_repo").unwrap();
+        let tx = db.transaction();
+        // "repo!" extends "repo" with a byte below the '#' separator, so its keys sort
+        // immediately below "repo"'s and the reverse scan walks straight into them.
+        for (repo, commit) in [("repo", "commit-mine"), ("repo!", "commit-other")] {
+            tx.create_commit_if_not_exists(
+                1234567890,
+                CreateCommitParams {
+                    commit: &commit.to_string(),
+                    server: &"github.com".to_string(),
+                    owner: &"owner".to_string(),
+                    repo: &repo.to_string(),
+                },
+            )
+            .unwrap();
+        }
+        tx.commit().unwrap();
+
+        let commits = db
+            .list_repo_commits(ListRepoCommitsParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+            })
+            .unwrap();
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits[0].commit, "commit-mine");
+
+        remove_db("data/test_list_commits_sibling_repo");
+    }
+
+    #[test]
     fn test_get_latest_commit() {
         let db = Database::new_rocksdb("data/test_get_latest_commit").unwrap();
         let tx = db.transaction();
@@ -962,6 +997,58 @@ mod tests {
         assert_eq!(artifacts[0].time_added.unix_timestamp(), 1234567890);
 
         remove_db("data/test_list_artifacts");
+    }
+
+    #[test]
+    fn test_list_artifacts_ignores_sibling_commit() {
+        let db = Database::new_rocksdb("data/test_list_artifacts_sibling_commit").unwrap();
+        let tx = db.transaction();
+        let time = 1234567890 * NANOSECONDS_PER_SECOND as u128;
+
+        // "abcdef" extends "abc", so its artifact keys directly follow "abc"'s and the
+        // forward scan runs on into them.
+        for commit in ["abc", "abcdef"] {
+            tx.create_commit_if_not_exists(
+                time,
+                CreateCommitParams {
+                    server: &"github.com".to_string(),
+                    owner: &"owner".to_string(),
+                    repo: &"repo".to_string(),
+                    commit: &commit.to_string(),
+                },
+            )
+            .unwrap();
+        }
+        tx.create_artifact(
+            time,
+            CreateArtifactParams {
+                commit: &"abc".to_string(),
+                path: &"mine.txt".to_string(),
+            },
+        )
+        .unwrap();
+        tx.create_artifact(
+            time,
+            CreateArtifactParams {
+                commit: &"abcdef".to_string(),
+                path: &"other.txt".to_string(),
+            },
+        )
+        .unwrap();
+        tx.commit().unwrap();
+
+        let artifacts = db
+            .list_artifacts(ListArtifactsParams {
+                server: &"github.com".to_string(),
+                owner: &"owner".to_string(),
+                repo: &"repo".to_string(),
+                commit: &"abc".to_string(),
+            })
+            .unwrap();
+        assert_eq!(artifacts.len(), 1);
+        assert_eq!(artifacts[0].path, "mine.txt");
+
+        remove_db("data/test_list_artifacts_sibling_commit");
     }
 
     #[test]
